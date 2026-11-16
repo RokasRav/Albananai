@@ -4,16 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#15222b">
+<meta name="description" content="Albanija automobiliu 2027-03-26 – 04-01: Theth, Komani, Ohridas, SH75, Gjirokastra. Interaktyvus planas.">
 <title>Albanijos kelionės planas</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Albanija">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
-/* Layout idea: a field-map on the left that stays put, a day logbook on the right that scrolls. */
+/* Layout idea: a real map that stays put on the left, a day logbook on the right; every other tab is a scannable reference sheet. */
 :root{
   --bg:#f1f4f3; --surface:#ffffff; --ink:#15222b; --muted:#586973; --line:#d5dddb;
   --accent:#b4232c; --accent-soft:#f6e3e3;
-  --water:#cde2ea; --land:#fbf9f2; --land-other:#e4e8e3; --lake:#a9cfdd;
   --good:#2c7a4b; --warn:#a86200; --crit:#b4232c; --warn-soft:#fbefd9; --good-soft:#e2f1e7;
   --display:"Bricolage Grotesque","IBM Plex Sans",system-ui,sans-serif;
   --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -24,55 +31,57 @@
     color-scheme:dark;
     --bg:#0f1518; --surface:#182126; --ink:#e6eef0; --muted:#95a6ae; --line:#2b383f;
     --accent:#ff7a7a; --accent-soft:#3a2224;
-    --water:#132a33; --land:#26333a; --land-other:#1a2328; --lake:#1f4a5a;
     --good:#6fcf97; --warn:#f0b24a; --crit:#ff7a7a; --warn-soft:#3a2e17; --good-soft:#1b3326;
   }
+  :root:not([data-theme="light"]) .leaflet-tile-pane{filter:brightness(.78) contrast(1.08) saturate(.85)}
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
   --bg:#0f1518; --surface:#182126; --ink:#e6eef0; --muted:#95a6ae; --line:#2b383f;
   --accent:#ff7a7a; --accent-soft:#3a2224;
-  --water:#132a33; --land:#26333a; --land-other:#1a2328; --lake:#1f4a5a;
   --good:#6fcf97; --warn:#f0b24a; --crit:#ff7a7a; --warn-soft:#3a2e17; --good-soft:#1b3326;
 }
+:root[data-theme="dark"] .leaflet-tile-pane{filter:brightness(.78) contrast(1.08) saturate(.85)}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
 a{color:var(--accent)}
-a:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
-h1{font-size:clamp(26px,4vw,38px);font-weight:700;letter-spacing:-.01em}
+h1{font-size:clamp(25px,4vw,36px);font-weight:700;letter-spacing:-.01em}
 h2{font-size:22px;font-weight:700}
 h3{font-size:16px;font-weight:700}
 p{margin:0}
-.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
-header.top{padding:26px 0 14px}
+.wrap{max-width:1280px;margin:0 auto;padding:0 18px}
+header.top{padding:22px 0 12px}
 .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
-.lede{color:var(--muted);max-width:68ch;margin-top:8px}
-.facts{display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:16px;font-variant-numeric:tabular-nums}
-.fact b{font-family:var(--display);font-size:20px;display:block}
+.lede{color:var(--muted);max-width:70ch;margin-top:6px}
+.headrow{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:flex-end;justify-content:space-between;margin-top:14px}
+.facts{display:flex;flex-wrap:wrap;gap:8px 24px;font-variant-numeric:tabular-nums}
+.fact b{font-family:var(--display);font-size:19px;display:block}
 .fact span{font-size:12px;color:var(--muted)}
-nav.tabs{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
-nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto}
-nav.tabs a{padding:12px 14px;text-decoration:none;color:var(--muted);font-weight:600;white-space:nowrap;border-bottom:3px solid transparent}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;color:var(--ink);font:inherit;font-weight:600;font-size:14px;padding:8px 12px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seglabel{font-size:12px;color:var(--muted);margin-bottom:4px}
+nav.tabs{position:sticky;top:0;z-index:1001;background:var(--bg);border-bottom:1px solid var(--line)}
+nav.tabs .wrap{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav.tabs a{padding:12px 12px;text-decoration:none;color:var(--muted);font-weight:600;white-space:nowrap;border-bottom:3px solid transparent;font-size:14px}
 nav.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
-main{padding:20px 0 60px}
+main{padding:18px 0 60px}
 .view{display:none}
 .view.on{display:block}
+.btn,.btn2{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:8px 13px;text-decoration:none;font-weight:600;font-size:14px;font-family:inherit;cursor:pointer;border:1px solid transparent}
+.btn{background:var(--ink);color:var(--bg)}
+.btn2{background:var(--surface);color:var(--ink);border-color:var(--line)}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 /* route view */
-.route{display:grid;grid-template-columns:minmax(320px,470px) 1fr;gap:22px;align-items:start}
-.mapcol{position:sticky;top:58px}
-.mapbox{position:relative;background:var(--water);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;height:min(76vh,800px)}
-.mapbox svg{width:100%;height:100%;display:block;touch-action:pan-y;cursor:grab;user-select:none}
-.mapbox svg.drag{cursor:grabbing}
-.zoom{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px}
-.zoom button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:18px;font-weight:600;cursor:pointer}
-.maphint{position:absolute;left:10px;top:10px;font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:3px 7px}
-.card{position:absolute;left:10px;right:10px;bottom:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;box-shadow:0 6px 20px rgba(0,0,0,.14);max-height:46%;overflow:auto}
-.card[hidden]{display:none}
-.card .x{position:absolute;right:8px;top:6px;border:0;background:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1}
-.card h3{padding-right:24px}
-.card .meta{font-size:12px;color:var(--muted);margin:2px 0 6px}
+.route{display:grid;grid-template-columns:minmax(330px,520px) 1fr;gap:20px;align-items:start}
+.mapcol{position:sticky;top:56px}
+#map{height:min(74vh,780px);border:1px solid var(--line);border-radius:var(--r);background:var(--surface);z-index:1}
+.mapnote{font-size:12px;color:var(--muted);margin-top:6px}
+.maperr{display:grid;place-items:center;height:100%;padding:20px;text-align:center;color:var(--muted)}
 .filters{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 11px;font:inherit;font-size:13px;cursor:pointer;text-decoration:none}
 .chip[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
@@ -94,54 +103,87 @@ main{padding:20px 0 60px}
 .dayhead .row{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:10px;font-variant-numeric:tabular-nums}
 .dayhead .row div{font-size:13px;color:var(--muted)}
 .dayhead .row b{color:var(--ink);font-size:15px;display:block}
-.btn{display:inline-flex;align-items:center;gap:6px;background:var(--ink);color:var(--bg);border-radius:8px;padding:8px 13px;text-decoration:none;font-weight:600;font-size:14px;margin-top:12px}
+.elev{margin-top:12px}
+.elev svg{width:100%;height:96px;display:block}
+.elev .cap{font-size:12px;color:var(--muted)}
 .note{border-radius:var(--r);padding:10px 14px;margin-top:10px;font-size:14px;border:1px solid var(--line);background:var(--surface)}
 .note.warn{background:var(--warn-soft);border-color:transparent}
 .note.good{background:var(--good-soft);border-color:transparent}
 .note b{font-weight:600}
-.tl{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:0}
-.tl li{display:grid;grid-template-columns:54px 22px 1fr;gap:10px;padding:11px 10px;border-radius:8px;cursor:default}
+.tl{list-style:none;margin:14px 0 0;padding:0}
+.tl li{display:grid;grid-template-columns:52px 22px 1fr;gap:10px;padding:11px 10px;border-radius:8px}
 .tl li.has{cursor:pointer}
 .tl li.sel{background:var(--accent-soft)}
 .tl li + li{border-top:1px dashed var(--line)}
 .tl .tm{font-variant-numeric:tabular-nums;font-weight:600;font-size:14px;padding-top:1px}
 .tl .ic svg{width:20px;height:20px;margin-top:2px}
 .tl .nm{font-weight:600}
-.tl .ds{font-size:14px;color:var(--muted);margin-top:2px;max-width:66ch}
-.tl .lk{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:5px;font-size:13px}
+.tl .ds{font-size:14px;color:var(--muted);margin-top:2px;max-width:68ch}
+.lk{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:5px;font-size:13px}
 .tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-left:6px;vertical-align:1px}
+.mk{background:none;border:0}
+.mk svg{width:22px;height:22px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+.leaflet-popup-content{font-family:var(--body);font-size:13px;line-height:1.45;margin:12px 14px}
+.leaflet-popup-content h3{font-size:15px;margin-bottom:2px}
+.leaflet-popup-content .meta{color:#586973;font-size:12px;margin-bottom:6px}
+.leaflet-popup-content .lk a{color:#b4232c}
+.leaflet-container{font-family:var(--body)}
+.leaflet-bar a{color:#15222b}
 /* text views */
-.prose{max-width:980px;display:grid;gap:26px}
+.prose{max-width:1020px;display:grid;gap:26px}
 .prose section{display:grid;gap:12px}
-.prose p,.prose li{max-width:72ch}
-.prose ul{margin:0;padding-left:20px;display:grid;gap:6px}
+.prose p,.prose li{max-width:74ch}
+.prose ul,.prose ol{margin:0;padding-left:20px;display:grid;gap:6px}
 .verdict{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:var(--r);padding:16px 18px;display:grid;gap:8px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;gap:8px;align-content:start}
+.big{font-family:var(--display);font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
 .tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
 table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
 th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
 th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
 tr:last-child td{border-bottom:0}
 td.num,th.num{text-align:right;white-space:nowrap}
+tr.hl td{background:var(--good-soft)}
 .pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:600;white-space:nowrap}
 .pill.g{background:var(--good-soft);color:var(--good)}
 .pill.w{background:var(--warn-soft);color:var(--warn)}
 .pill.c{background:var(--accent-soft);color:var(--crit)}
-.check{list-style:none;padding:0;margin:0;display:grid;gap:4px}
+.check{list-style:none;padding:0;margin:0;display:grid;gap:2px}
 .check label{display:grid;grid-template-columns:20px 1fr;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer}
 .check label:hover{background:var(--surface)}
 .check input{width:17px;height:17px;margin-top:2px;accent-color:var(--accent)}
 .check input:checked + span{color:var(--muted);text-decoration:line-through}
 .src{font-size:13px;color:var(--muted)}
 .src a{color:var(--muted)}
+textarea,input[type=text],input[type=number],select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+textarea{width:100%;min-height:220px;font-size:13px;line-height:1.5}
+.form{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+.form label{display:grid;gap:3px;font-size:12px;color:var(--muted)}
+.wx td{min-width:86px}
+.wx .t{font-weight:600}
+.wx .p{font-size:12px;color:var(--muted)}
+.wx td.snow{background:var(--warn-soft)}
+.phr td:first-child{font-weight:600}
+.phr td:nth-child(2){color:var(--muted);font-style:italic}
+.status{font-size:13px;color:var(--muted)}
 footer{font-size:12px;color:var(--muted);margin-top:30px}
-@media (max-width:860px){
+@media (max-width:900px){
   .route{grid-template-columns:1fr}
   .mapcol{position:static}
-  .mapbox{height:56vh}
+  #map{height:58vh}
   .dcard{grid-template-columns:44px 1fr}
   .dcard .k{grid-column:2;text-align:left}
   .dcard .k b{display:inline;margin-right:8px}
   .tl li{grid-template-columns:46px 20px 1fr;padding:10px 4px}
+}
+@media print{
+  nav.tabs,.mapcol,.filters,.days,.btnrow,.seg,.noprint,footer{display:none!important}
+  .view{display:block!important;break-before:page}
+  #view-marsrutas{break-before:auto}
+  .route{display:block}
+  body{background:#fff;color:#000;font-size:12px}
+  .dayhead,.box,.tblwrap,.note{border-color:#999}
 }
 @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
 </style>
@@ -149,26 +191,34 @@ footer{font-size:12px;color:var(--muted);margin-top:30px}
 <body>
 <header class="top">
   <div class="wrap">
-    <div class="eyebrow">Kelionės planas v3.1 · patikrinta 2026-11-16</div>
+    <div class="eyebrow">Kelionės planas v4 · patikrinta 2026-11-16 · <span id="countdown"></span></div>
     <h1>Albanija automobiliu: Theth, Komani, Ohridas, SH75, Gjirokastra</h1>
-    <p class="lede">2027 m. kovo 26 – balandžio 1 d., keturiese, pradžia ir pabaiga Tiranos oro uoste. Šiaurės Alpės – kelionės ašis, po jų pietinis žiedas be grįžimo tuo pačiu keliu.</p>
-    <div class="facts">
-      <div class="fact"><b>7 d. / 6 n.</b><span>Pn 03-26 – Kt 04-01</span></div>
-      <div class="fact"><b>~1 170 km</b><span>iš viso keliais</span></div>
-      <div class="fact"><b>~25,5 h</b><span>vairavimo, vid. 3 h 40 per dieną</span></div>
-      <div class="fact"><b>5 vietos</b><span>nakvynėms, Shkodër du kartus</span></div>
-      <div class="fact"><b>~545–840 €</b><span>vienam žmogui su skrydžiu</span></div>
+    <p class="lede">2027 m. kovo 26 – balandžio 1 d., keturiese, pradžia ir pabaiga Tiranos oro uoste. Pirmos keturios dienos – šiaurės Alpės; paskutinės trys priklauso nuo pasirinkto varianto.</p>
+    <div class="headrow">
+      <div class="facts" id="facts"></div>
+      <div class="noprint">
+        <div class="seglabel">D5–D7 variantas</div>
+        <div class="seg" id="varseg" role="group" aria-label="Maršruto variantas">
+          <button type="button" data-v="A" aria-pressed="true">A · Pilnas žiedas</button>
+          <button type="button" data-v="B" aria-pressed="false">B · Be sienos</button>
+          <button type="button" data-v="C" aria-pressed="false">C · Saugus</button>
+        </div>
+      </div>
     </div>
   </div>
 </header>
 
 <nav class="tabs" aria-label="Skyriai">
   <div class="wrap">
-    <a href="#marsrutas" data-tab="marsrutas">Maršrutas ir žemėlapis</a>
+    <a href="#marsrutas" data-tab="marsrutas">Maršrutas</a>
+    <a href="#automobilis" data-tab="automobilis">Automobilis</a>
+    <a href="#orai" data-tab="orai">Orai</a>
+    <a href="#kelioneje" data-tab="kelioneje">Kelionėje</a>
+    <a href="#islaidos" data-tab="islaidos">Išlaidos</a>
     <a href="#patikra" data-tab="patikra">Ar tai logiška?</a>
     <a href="#nakvynes" data-tab="nakvynes">Nakvynės</a>
-    <a href="#biudzetas" data-tab="biudzetas">Biudžetas ir kuras</a>
-    <a href="#pasiruosimas" data-tab="pasiruosimas">Ką padaryti iš anksto</a>
+    <a href="#biudzetas" data-tab="biudzetas">Biudžetas</a>
+    <a href="#pasiruosimas" data-tab="pasiruosimas">Pasiruošimas</a>
   </div>
 </nav>
 
@@ -179,19 +229,223 @@ footer{font-size:12px;color:var(--muted);margin-top:30px}
   <div class="days" id="daychips" aria-label="Dienos"></div>
   <div class="route">
     <div class="mapcol">
-      <div class="mapbox" id="mapbox">
-        <svg id="map" role="img" aria-label="Schematinis Albanijos žemėlapis su maršrutu"></svg>
-        <div class="maphint">Schema. Tempkite, artinkite mygtukais arba Ctrl + ratuku</div>
-        <div class="zoom">
-          <button type="button" id="zin" aria-label="Priartinti">+</button>
-          <button type="button" id="zout" aria-label="Nutolinti">−</button>
-          <button type="button" id="zfit" aria-label="Rodyti visą dieną" title="Rodyti viską">⤢</button>
-        </div>
-        <div class="card" id="card" hidden></div>
-      </div>
+      <div id="map" role="region" aria-label="Maršruto žemėlapis"></div>
+      <div class="mapnote" id="mapnote">Keliai skaičiuojami pagal OSRM, aukščiai – pagal Open-Meteo. Kelionės metu vadovaukitės Google Maps.</div>
       <div class="filters" id="filters" aria-label="Žymeklių rūšys"></div>
     </div>
     <div class="panel" id="panel"></div>
+  </div>
+</div>
+
+<!-- CAR -->
+<div class="view" id="view-automobilis">
+  <div class="prose">
+    <section>
+      <h2>Automobilio nuoma: ką ir kur imti</h2>
+      <div class="verdict">
+        <p><b>Išvada.</b> Su debetine kortele imkite <b>vietinę Albanijos nuomos bendrovę per Localrent arba TakeCars</b>, filtruodami „no deposit“ arba „deposit in cash“. Tarptautinės bendrovės oro uoste (Avis, Enterprise, Europcar) užstatui priima tik kreditinę kortelę.</p>
+        <p><b>Klasė:</b> kompaktiškas visureigis su automatine dėže (Duster, Sportage, Tucson ar panašus). Dyzelinas – pageidautinas, bet ne būtinas. <b>Biudžetas:</b> ~250–420 € už 7 paras su pilnu draudimu, ~65–105 € žmogui.</p>
+      </div>
+    </section>
+
+    <section>
+      <h3>Jūsų reikalavimai ir ką jie reiškia</h3>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Reikalavimas</th><th>Ką rodo šaltiniai</th><th>Ką daryti</th></tr></thead>
+        <tbody>
+          <tr><td><b>Debetinė kortelė</b></td><td>Avis oro uoste debetinių kortelių nepriima; Enterprise, Europcar ir ABBYCAR užstatui raštu reikalauja tik kreditinės. Lankstumas dėl debetinės kortelės ir grynųjų yra vietinių bendrovių pusėje.</td><td>Ieškokite pasiūlymų su „no deposit“ arba užstatu grynaisiais. Prieš mokėdami raštu patvirtinkite, kad jūsų kortelės tipas tinka.</td></tr>
+          <tr><td><b>Automatinė dėžė</b></td><td>Automatų Tiranoje yra visose klasėse, bet jų mažiau nei mechaninių, todėl geri pasiūlymai išgraibstomi anksčiau.</td><td>Rezervuokite iki sausio, su nemokamu atšaukimu.</td></tr>
+          <tr><td><b>Dyzelinas</b></td><td>Albanijoje dyzelinas litrui brangesnis nei benzinas, bet 1 170 km kelionėje sutaupo ~25 € grupei.</td><td>Pageidavimas, ne reikalavimas. Nemokėkite daugiau nei ~3,5 € per parą už dyzelinį variklį.</td></tr>
+          <tr><td><b>22 m. vairuotojas</b></td><td>Daugumoje bendrovių minimalus amžius – 21 m., o vairuotojo pažymėjimą reikia turėti 2 metus; Sixt Albanijoje reikalauja 22 m. ir metų stažo. 21–24 m. vairuotojams dažnai taikomas ~5–15 € per parą mokestis.</td><td>Jei 22 m. vairuotojas vairuos, jis turi būti įrašytas į sutartį. Paklauskite, ar mokestis taikomas ir ar yra jo viršutinė riba.</td></tr>
+          <tr><td><b>Stažas 3 ir 5 metai</b></td><td>Kai kurios bendrovės reikalauja 3 metų stažo.</td><td>Abu vairuotojai tinka beveik visur.</td></tr>
+          <tr><td><b>Theth ir Koman keliai</b></td><td>Daug nuomos sutarčių draudžia žvyrkelius; draudimas ten negalioja, o automobilį gali užblokuoti per GPS.</td><td>Raštu paklauskite apie SH21 į Theth ir SH25 iki Koman. Atsakymą išsisaugokite.</td></tr>
+          <tr><td><b>Šiaurės Makedonija (variantas A)</b></td><td>Reikia leidimo ir žaliosios kortelės, paprastai ~30–50 €; Enterprise ima 48 € už nuomą.</td><td>Užsisakykite iš anksto. Variante B ar C šio mokesčio nėra.</td></tr>
+        </tbody>
+      </table></div>
+      <p class="src">Šaltiniai: <a href="https://avis.com/amp/pt/locations/al/tirana/tia">Avis TIA</a>, <a href="https://himara.net/fr/blog/albania-car-rental-no-credit-card">himara.net (tiekėjų sąlygos, 2026 rugsėjis)</a>, <a href="https://www.sixt.com/car-rental/albania/tirana">Sixt</a>, <a href="https://preview.albaniavisit.com/travel-guide/albania-car-rentals-tirana/">AlbaniaVisit</a>, <a href="https://localrent.com/journal/albania/articles/prohibited-routes/">Localrent</a>, <a href="https://auto-jardim.com/?p=11180">Auto Jardim</a>, <a href="https://www.enterprise.com/en/car-rental-locations/al/tirana-city-je46.html?mcid=yext%3A245709">Enterprise</a>.</p>
+    </section>
+
+    <section>
+      <h3>Kur ieškoti</h3>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Platforma</th><th>Kuo tinka jums</th><th>Atsargiai</th><th></th></tr></thead>
+        <tbody>
+          <tr class="hl"><td><b>Localrent</b></td><td>Vietinės bendrovės; yra filtrai „be užstato“ ir „be kreditinės kortelės“. Išankstinis mokėjimas – kortele, likutis – vietoje.</td><td>Kiekvieno pasiūlymo mokėjimo sąlygos skirtingos – skaitykite jas prie konkretaus automobilio.</td><td><a href="https://www.localrent.com/en/albania/tirana/airport-tia/" target="_blank" rel="noopener">Atidaryti</a></td></tr>
+          <tr class="hl"><td><b>TakeCars</b></td><td>Modelis „15–20 % išankstinis mokėjimas bet kokia kortele, likutis grynaisiais“. Užstatas dažnai 100–300 € grynaisiais arba 0.</td><td>Matote konkretų automobilį ir jo atsiliepimus – rinkitės naujesnius ir geriau įvertintus.</td><td><a href="https://takecars.com/blog/tirana-airport-no-deposit/" target="_blank" rel="noopener">Atidaryti</a></td></tr>
+          <tr><td><b>rentfromlocals.al</b></td><td>Privatūs savininkai; nurodyta: debetinė kortelė, grynieji, mokestis už sieną.</td><td>Automobiliai senesni, pagalba kelyje ribota.</td><td><a href="https://www.rentfromlocals.al/en/listings/5660-vw-golf-7-automatic" target="_blank" rel="noopener">Pavyzdys</a></td></tr>
+          <tr><td><b>DiscoverCars</b></td><td>Daugiausia pasiūlymų, filtras „No deposit“.</td><td>Brokerio „full coverage“ – tai kompensacija vėliau. Nuomotojas vis tiek gali blokuoti užstatą kortelėje, o debetinės nepriimti. Yra atsiliepimų, kai prie stalo teko pirkti papildomą draudimą.</td><td><a href="https://www.discovercars.com/albania/tirana/tia/no-deposit" target="_blank" rel="noopener">Atidaryti</a></td></tr>
+          <tr><td>Avis, Enterprise, Europcar, Sixt</td><td>Nauji automobiliai, aiškios sąlygos.</td><td>Užstatas tik kreditine kortele – jums netinka.</td><td></td></tr>
+        </tbody>
+      </table></div>
+      <p class="src">Šaltiniai: <a href="https://www.localrent.com/en/albania/rinas">Localrent</a>, <a href="https://takecars.com/blog/tirana-airport-no-deposit/">TakeCars</a>, <a href="https://www.discovercars.com/partners/eurocarrentals-1802">DiscoverCars atsiliepimai</a>.</p>
+    </section>
+
+    <section>
+      <h3>Rekomenduojami modeliai (automatas)</h3>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Modelis ar panašus</th><th>Klasė</th><th class="num">Bagažinė*</th><th class="num">Prošvaisa*</th><th>Kodėl tinka arba ne</th><th class="num">~€ / para**</th></tr></thead>
+        <tbody>
+          <tr class="hl"><td><b>Kia Sportage / Hyundai Tucson</b></td><td>Vidutinis visureigis</td><td class="num">~550 l</td><td class="num">~170 mm</td><td>Geriausias pasirinkimas 4 suaugusiems su krepšiais; dažnai būna dyzelinis su automatu.</td><td class="num">40–60</td></tr>
+          <tr class="hl"><td><b>Dacia Duster</b></td><td>Kompaktiškas visureigis</td><td class="num">~440 l</td><td class="num">~200 mm</td><td>Didžiausia prošvaisa už mažiausią kainą – geriausiai tinka Theth ir SH75 žvyrui. Automatų mažiau – ieškokite anksti.</td><td class="num">35–50</td></tr>
+          <tr><td>Ford Puma / Hyundai Bayon / Kia Stonic</td><td>Mažas visureigis</td><td class="num">~350–450 l</td><td class="num">~165–185 mm</td><td>Pigiausias variantas su automatu, bet keturiese su krepšiais ankšta.</td><td class="num">30–46</td></tr>
+          <tr><td>Škoda Octavia / Hyundai i30 universalas</td><td>Universalas</td><td class="num">~600 l</td><td class="num">~140 mm</td><td>Daugiausia vietos bagažui, bet žemas – Theth kaime ir SH75 žvyre reikės atsargumo.</td><td class="num">35–55</td></tr>
+          <tr><td>Fiat 500X</td><td>Mažas visureigis</td><td class="num">~350 l</td><td class="num">~170 mm</td><td>DiscoverCars tiekėjų įvertinimai žemi (~6/10). Venkite.</td><td class="num">~46</td></tr>
+        </tbody>
+      </table></div>
+      <p class="src">* Apytiksliai, pagal gamintojų duomenis; konkreti versija gali skirtis. ** Kainų intervalai sudaryti pagal 2026 m. rudens DiscoverCars ir AlbaniaVisit duomenis (kompaktiškas visureigis ~30–50 € ne sezono metu, automatai ~30–46 € per parą). Vidutinio visureigio intervalas – mano įvertis; tikrinkite savo datoms. <a href="https://www.discovercars.com/suv/tirane-airport-tia_1802">DiscoverCars SUV TIA</a>, <a href="https://www.discovercars.com/albania/tirana/tia/no-deposit">DiscoverCars no-deposit</a>.</p>
+    </section>
+
+    <section>
+      <h3>Kiek kainuos visa nuoma</h3>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Eilutė</th><th class="num">Grupei</th><th>Pastaba</th></tr></thead>
+        <tbody>
+          <tr><td>Nuoma 7 paros, kompaktiškas visureigis su automatu</td><td class="num">210–350 €</td><td>30–50 € per parą</td></tr>
+          <tr><td>Pilnas draudimas be išskaitos (iš paties nuomotojo)</td><td class="num">0–70 €</td><td>Vietinėse bendrovėse dažnai jau įskaičiuotas</td></tr>
+          <tr><td>Jauno vairuotojo mokestis (jei vairuos 22 m.)</td><td class="num">0–70 €</td><td>~5–10 € per parą, kartais su viršutine riba</td></tr>
+          <tr><td>Žalioji kortelė ir leidimas į Šiaurės Makedoniją</td><td class="num">0–50 €</td><td>Tik variante A</td></tr>
+          <tr><td>Oro uosto mokestis</td><td class="num">0–15 €</td><td>Kai kurios bendrovės jį taiko</td></tr>
+          <tr><td><b>Iš viso</b></td><td class="num"><b>~250–420 €</b></td><td>~65–105 € žmogui</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h3>Laiškas nuomos bendrovei prieš rezervuojant</h3>
+      <p>Nusiųskite 2–3 pasirinktiems tiekėjams. Rezervuokite pas tą, kuris į visus klausimus atsakys raštu ir aiškiai.</p>
+      <textarea id="emailtpl" aria-label="Laiško šablonas" readonly>Subject: Rental 26 Mar – 1 Apr 2027, Tirana Airport – automatic, debit card
+
+Hello,
+
+We would like to rent a car from Tirana Airport (pick-up 26 March 2027 ~14:00, return 1 April 2027 ~13:30).
+
+Requirements:
+- Automatic transmission, compact or mid-size SUV (e.g. Dacia Duster, Kia Sportage, Hyundai Tucson), diesel preferred
+- 4 adults with luggage
+- Two drivers: aged 22 (licence held 3 years) and older (licence held 5 years), EU licences
+
+Please confirm in writing:
+1. Total price including full insurance with zero excess.
+2. Deposit: can we leave it in cash or on a DEBIT card (Visa/Mastercard)? What amount?
+3. Young driver fee for the 22-year-old driver, if any.
+4. Is driving allowed on the SH21 road to Theth and on the road to Koman (Lake Komani ferry port)?
+5. Cross-border permission and Green Card for North Macedonia (day trip to Ohrid on 30 March): price?
+6. Fuel policy (full-to-full?) and any airport fee.
+7. Is the car equipped with a spare wheel and snow chains?
+
+Thank you!</textarea>
+      <div class="btnrow"><button class="btn" type="button" id="copyemail">Kopijuoti laišką</button><span class="status" id="copystatus" role="status"></span></div>
+    </section>
+
+    <section>
+      <h3>Atsiimant automobilį</h3>
+      <ul class="check" id="pickupcheck"></ul>
+    </section>
+  </div>
+</div>
+
+<!-- WEATHER -->
+<div class="view" id="view-orai">
+  <div class="prose">
+    <section>
+      <h2>Orai maršruto taškuose</h2>
+      <p>Iki kelionės likus daugiau nei 16 dienų, tikslios prognozės dar nėra. Todėl rodomi praėjusių metų tų pačių datų orai, o perėjos būklę dabar galite stebėti per 7 dienų prognozę. Likus 16 dienų, automatiškai atsiras prognozė kelionės datoms.</p>
+      <div class="seg" id="wxseg" role="group" aria-label="Orų režimas">
+        <button type="button" data-m="trip" aria-pressed="true">Kelionės datos</button>
+        <button type="button" data-m="now" aria-pressed="false">Dabar, 7 d.</button>
+      </div>
+      <p class="status" id="wxstatus" role="status">Kraunama…</p>
+      <div class="tblwrap"><table class="wx" id="wxtable"></table></div>
+      <p class="src">Duomenys: <a href="https://open-meteo.com/">Open-Meteo</a> (prognozė ir archyvas, aukščiui pritaikyti). Langelis su ❄ – snigo ar snigs; perėjoje (1 690 m) tai lemia D2 sprendimą.</p>
+    </section>
+    <section>
+      <h3>Kaip skaityti perėjos eilutę</h3>
+      <ul>
+        <li><b>Sniego nėra, max teigiama</b> – važiuojate įprastai.</li>
+        <li><b>Sniego 1–10 cm</b> – kelias paprastai valomas iki Bogë ir per perėją; važiuokite su žiemos padangomis ir grandinėmis bagažinėje, ryte paskambinkite į svečių namus.</li>
+        <li><b>Daugiau nei 20 cm arba lavinų įspėjimas</b> – planas B: diena prie Shkodër ežero, Theth atsisakoma.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<!-- ON THE ROAD -->
+<div class="view" id="view-kelioneje">
+  <div class="prose">
+    <section>
+      <h2>Kelionėje</h2>
+      <div class="grid2">
+        <div class="box">
+          <h3>Pagalba</h3>
+          <div><span class="big">112</span> bendras pagalbos numeris</div>
+          <div>Policija <b>129</b> · Greitoji <b>127</b> · Ugniagesiai <b>128</b></div>
+          <div class="src">LR ambasada Atėnuose atstovauja ir Albanijai: +30 210 72 94 357, <a href="https://gr.mfa.lt" target="_blank" rel="noopener">gr.mfa.lt</a></div>
+          <div class="src">Nuomos bendrovės ir draudimo numerius įrašykite čia:</div>
+          <input type="text" id="mynums" placeholder="Nuoma: +355 …   Draudimas: +370 …" aria-label="Nuomos ir draudimo telefonai">
+        </div>
+        <div class="box">
+          <h3>Vairavimas</h3>
+          <ul>
+            <li>Greitis: miestuose <b>40</b>, už jų <b>80</b>, greitkeliuose <b>90</b>, autostradoje iki <b>110</b> (A1 kai kur <b>130</b>, jei pažymėta).</li>
+            <li>Alkoholis: leidžiama riba 0,01 %, t. y. praktiškai <b>nulis</b>.</li>
+            <li>Diržai privalomi ir priekyje, ir gale.</li>
+            <li>Greičio kamerų daug, ypač SH4 tarp Fier ir Lushnjë.</li>
+            <li>Sustabdžius policijai: pasas, teisės, nuomos sutartis. Baudą mokėkite tik pagal kvitą, ne grynaisiais pareigūnui.</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h3>Pinigai</h3>
+          <div class="form">
+            <label for="cxin">Suma<input type="number" id="cxin" value="10" min="0" step="any" style="width:110px"></label>
+            <label for="cxcur">Valiuta<select id="cxcur"><option>EUR</option><option>ALL</option><option>MKD</option></select></label>
+          </div>
+          <div id="cxout" style="font-variant-numeric:tabular-nums"></div>
+          <div class="src">Apytikslis kursas: 1 € ≈ 94 ALL ≈ 61,6 MKD. Bankomate rinkitės „without conversion“.</div>
+        </div>
+      </div>
+      <p class="src">Šaltiniai: <a href="https://pickuptrucktalk.com/2026/05/car-rental-tirana-airport-a-practical-guide-for-the-independent-traveler/">pagalbos numeriai</a>, <a href="https://explorertom.com/en/?p=68029">greičio ribos</a>, <a href="https://www.discovercars.com/suv/tirane-airport-tia_1802">alkoholio riba</a>, <a href="https://www.lrvalstybe.lt/kontaktai/lietuvos-respublikos-ambasada-graikijos-respublikoje-kipro-respublikai-19337">LR ambasada</a>.</p>
+    </section>
+    <section>
+      <h3>Mini žodynėlis</h3>
+      <div class="tblwrap"><table class="phr"><thead><tr><th>Albaniškai</th><th>Tarimas</th><th>Lietuviškai</th></tr></thead><tbody id="phrases"></tbody></table></div>
+      <p class="src">Vyresni žmonės kartais linkteli galva sakydami „ne“ ir papurto – sakydami „taip“. Jei abejojate, paklauskite žodžiu.</p>
+    </section>
+    <section>
+      <h3>Ką įsidėti</h3>
+      <div id="packing" class="grid2"></div>
+    </section>
+  </div>
+</div>
+
+<!-- EXPENSES -->
+<div class="view" id="view-islaidos">
+  <div class="prose">
+    <section>
+      <h2>Išlaidų dalytuvas</h2>
+      <p>Įrašykite, kas už ką sumokėjo; viskas dalinama po lygiai ir perskaičiuojama į eurus. Duomenys saugomi tik šiame telefone. Kad kiti matytų tą patį, nukopijuokite duomenis ir nusiųskite – jie įklijuos savo telefone.</p>
+      <div class="box">
+        <div class="form" id="people"></div>
+      </div>
+      <form class="form" id="expform">
+        <label for="exwho">Mokėjo<select id="exwho"></select></label>
+        <label for="examt">Suma<input type="number" id="examt" min="0" step="any" required style="width:110px"></label>
+        <label for="excur">Valiuta<select id="excur"><option>EUR</option><option>ALL</option><option>MKD</option></select></label>
+        <label for="exdesc" style="flex:1;min-width:160px">Už ką<input type="text" id="exdesc" placeholder="Kuras Ohride"></label>
+        <button class="btn" type="submit">Pridėti</button>
+      </form>
+      <div class="grid2">
+        <div class="box"><h3>Kas kam skolingas</h3><div id="settle"></div></div>
+        <div class="box"><h3>Balansas</h3><div id="balances"></div></div>
+      </div>
+      <div class="tblwrap"><table><thead><tr><th>Kas</th><th>Už ką</th><th class="num">Suma</th><th class="num">€</th><th></th></tr></thead><tbody id="exlist"></tbody></table></div>
+      <div class="btnrow">
+        <button class="btn2" type="button" id="exexport">Kopijuoti duomenis</button>
+        <button class="btn2" type="button" id="eximport">Įklijuoti duomenis</button>
+        <button class="btn2" type="button" id="exclear">Išvalyti viską</button>
+        <span class="status" id="exstatus" role="status"></span>
+      </div>
+      <textarea id="eximportbox" hidden placeholder="Įklijuokite čia gautus duomenis ir spauskite „Įklijuoti duomenis“ dar kartą" style="min-height:90px"></textarea>
+    </section>
   </div>
 </div>
 
@@ -201,86 +455,43 @@ footer{font-size:12px;color:var(--muted);margin-top:30px}
     <section>
       <h2>Ar šis maršrutas logiškas savaitei?</h2>
       <div class="verdict">
-        <p><b>Kaip geometrija – taip.</b> Tai viena šiaurinė atšaka ir vienas pietinis žiedas. Tuo pačiu keliu grįžtate tik ten, kur kito kelio nėra (iš viso ~225 km iš ~1 170 km). Pietuose nė viena atkarpa nesikartoja.</p>
-        <p><b>Kaip tempas – ties riba.</b> Dauguma keliautojų savaitei renkasi tik šiaurę arba tik pietus. Šis planas apima abu, todėl turi dvi ~5 val. vairavimo dienas, nė vienos laisvos dienos ir naują lovą beveik kasnakt. Jis tinka tik tada, jei visi keturi su tuo sutinka. Jei ne, rinkitės variantą C žemiau.</p>
+        <p><b>Kaip geometrija – taip.</b> Tai viena šiaurinė atšaka ir vienas pietinis žiedas. Tuo pačiu keliu važiuojate tik ten, kur kito kelio nėra: ~225 km iš ~1 170. Pietuose nė viena atkarpa nesikartoja.</p>
+        <p><b>Kaip tempas – ties riba.</b> Dauguma gidų savaitei pataria rinktis vieną šalies pusę: bandant aprėpti abi, didelė laiko dalis praeina automobilyje. Jūsų plane abi pusės, todėl variantas A turi dvi ~5 val. vairavimo dienas iš eilės. Jei tai per daug, rinkitės C.</p>
       </div>
+      <p class="src"><a href="https://www.albania-spirit.com/blog/how-many-days-in-albania/">Albania Spirit</a>, <a href="https://explorertom.com/albanien-rundreise-7-tage/">Explorertom</a>, <a href="https://johnnyafrica.com/albania-travel-itinerary">Johnny Africa</a>, <a href="https://www.rexby.com/laurabruehl/i/mO-MPEJPSUKYl9yE3Q17EQ">Rexby</a>, <a href="https://www.stippl.io/cwcwcw/trip/Test">7 dienų kelionės dienoraštis</a>.</p>
     </section>
-
     <section>
-      <h3>Kur važiuojame tuo pačiu keliu du kartus</h3>
+      <h3>Variantai</h3>
       <div class="tblwrap"><table>
-        <thead><tr><th>Atkarpa</th><th class="num">km</th><th>Dienos</th><th>Kodėl neišvengiama</th></tr></thead>
-        <tbody>
-          <tr><td>Fushë-Krujë ↔ Shkodër (A1/SH1)</td><td class="num">~85</td><td>D1 ir D4</td><td>Vienintelis greitas kelias į šiaurę.</td></tr>
-          <tr><td>Shkodër ↔ Theth (SH21)</td><td class="num">~75</td><td>D2 ir D3</td><td>Theth slėnis – aklakelis; į Valboną veda tik pėsčiųjų takas.</td></tr>
-          <tr><td>Vau i Dejës ↔ Koman</td><td class="num">~35</td><td>D4 ten ir atgal</td><td>Aklakelis iki užtvankos. Keltas su automobiliais plaukia tik nuo balandžio 15 d.</td></tr>
-          <tr><td>Tepelenë ↔ Gjirokastra</td><td class="num">~30</td><td>D6 ir D7</td><td>Gjirokastra yra 30 km į pietus nuo sankryžos.</td></tr>
-        </tbody>
+        <thead><tr><th>Variantas</th><th>D5–D7</th><th class="num">km</th><th>Kam tinka</th></tr></thead>
+        <tbody id="vartable"></tbody>
       </table></div>
-      <p>Pietinis žiedas eina prieš laikrodžio rodyklę: Tirana → Elbasanas → Ohridas → Korčė → Leskovikas → Përmet → Gjirokastra → Fier → oro uostas. Kryptis parinkta taip, kad paskutinė diena būtų geriausiu šalies keliu (SH4), o ne remontuojama Elbasano–Qafë Thanë atkarpa.</p>
+      <p>Šiaurinė dalis (D1–D4) visuose variantuose ta pati. Korčės, Gjirokastros ir Berato nakvynes rezervuokite su nemokamu atšaukimu – tada tarp A, B ir C galėsite rinktis dar D4 vakarą Tiranoje.</p>
     </section>
-
     <section>
-      <h3>Ką rodo kitų keliautojų maršrutai</h3>
-      <ul>
-        <li>Kelionių gidai savaitei pataria rinktis vieną šalies pusę: bandant aprėpti abi, didelė laiko dalis praeina automobilyje (<a href="https://www.albania-spirit.com/blog/how-many-days-in-albania/">Albania Spirit</a>, <a href="https://explorertom.com/albanien-rundreise-7-tage/">Explorertom</a>).</li>
-        <li>Abi puses apvažiavęs autorius sako, kad joms reikia bent pusantros savaitės, o turėdamas tik vieną rinktųsi šiaurę (<a href="https://johnnyafrica.com/albania-travel-itinerary">Johnny Africa</a>). Jūsų prioritetas sutampa.</li>
-        <li>Suspaustų 7 dienų maršrutų nuo šiaurės iki pietų yra, bet patys autoriai juos vadina greito tempo, su trumpais sustojimais (<a href="https://www.rexby.com/laurabruehl/i/mO-MPEJPSUKYl9yE3Q17EQ">Rexby</a>).</li>
-        <li>Pietinis žiedas Gjirokastra – Përmet – Korčė – Ohrido ežeras – Elbasanas – Tirana kitų pravažiuotas per kelias dienas, tik priešinga kryptimi (<a href="https://www.stippl.io/cwcwcw/trip/Test">7 dienų kelionės dienoraštis</a>).</li>
-        <li>Gjirokastra → Tirana paskutinę dieną važiuoja daug kas, bet dažniausiai dar nakvoja Tiranoje (<a href="https://alongdustyroads.com/posts/albania-itinerary-road-trip">Along Dusty Roads</a>). Jūs skrendate tą pačią dieną, todėl D7 grafikas griežtas.</li>
-      </ul>
-    </section>
-
-    <section>
-      <h3>Ką ši patikra pakeitė plane (v3 → v3.1)</h3>
+      <h3>Tas pats kelias du kartus</h3>
       <div class="tblwrap"><table>
-        <thead><tr><th>Radinys</th><th>Pakeitimas</th><th>Šaltinis</th></tr></thead>
+        <thead><tr><th>Atkarpa</th><th class="num">km</th><th>Kodėl neišvengiama</th></tr></thead>
         <tbody>
-          <tr><td>Skanderbego muziejus Krujoje pirmadieniais uždarytas, o D4 yra pirmadienis ir dar nedarbo diena.</td><td>Kruja grąžinta į D1 (penktadienis, muziejus iki 17:00).</td><td><a href="https://preview.albaniavisit.com/attractions/skanderbeg-museum/">AlbaniaVisit</a>, <a href="https://www.officeholidays.com/holidays/albania/easter-monday">Office Holidays</a></td></tr>
-          <tr><td>Kelias į Bovillos ežerą nuomos sutartyse dažnai draudžiamas, draudimas ten negalioja.</td><td>Bovilla išbraukta iš pagrindinio plano. Jei labai norite – tik su 4x4 ekskursija iš Tiranos.</td><td><a href="https://localrent.com/journal/albania/articles/prohibited-routes/">Localrent</a>, <a href="https://www.walkmyworld.com/posts/bovilla-lake">Walk My World</a></td></tr>
-          <tr><td>Iki Koman nuo Shkodër realiai 1,5–2 val., o nuo Koman iki Tiranos 3–3,5 val. Kai kurios nuomos bendrovės šį kelią draudžia.</td><td>D4 išvykimas 7:00, Tirana ~17:15. Pridėta alternatyva – pervežimas iš Shkodër.</td><td><a href="https://wildtouralbania.com/?p=2523">Wild Tour Albania</a>, <a href="https://rentmotors.ru/en/rules/albaniia">nuomos taisyklių pavyzdys</a></td></tr>
-          <tr><td>Gjirokastra – oro uostas: ~217 km, 3 h 15–3 h 30 be sustojimų, kai kurie šaltiniai skaičiuoja 4 val.</td><td>D7 išvykimas lygiai 10:00, Tepelenė tik jei spėjate.</td><td><a href="https://easybalkantransfers.com/transfers/gjirokastra-to-tirana-private-transfer/">Easy Balkan Transfers</a>, <a href="https://albaniatourguide.com/how-to-get-from-gjirokaster-to-tirana-bus-prices-taxi-car/">Albania Tour Guide</a></td></tr>
-          <tr><td>Kuras Albanijoje 2026 m. kainavo ~1,9–2,1 €/l, Šiaurės Makedonijoje ~1,6 €/l.</td><td>Perskaičiuotas biudžetas; pilnas bakas Ohride.</td><td><a href="https://openvan.camp/en/tools/fuel-prices/albania">OpenVan (AL)</a>, <a href="https://openvan.camp/en/tools/fuel-prices/north-macedonia">OpenVan (MK)</a></td></tr>
-          <tr><td>Degalinės prie pat oro uosto (Alpet) turi daug skundų dėl permokų.</td><td>Paskutinis papildymas – Kastrati prie Vorë.</td><td>Google atsiliepimai</td></tr>
-          <tr><td>Benjos versmės yra ~13–14 km į pietryčius nuo Përmet, posūkis prie Petran.</td><td>D6 tvarka: pirma Benja, tada pietūs Përmet – be grįžimo atgal.</td><td><a href="https://www.hotspringsguides.com/hot-springs/benja-thermal-baths-albania">Hot Springs Guides</a></td></tr>
+          <tr><td>Fushë-Krujë ↔ Shkodër</td><td class="num">~85</td><td>Vienintelis greitas kelias į šiaurę.</td></tr>
+          <tr><td>Shkodër ↔ Theth</td><td class="num">~75</td><td>Theth slėnis – aklakelis.</td></tr>
+          <tr><td>Vau i Dejës ↔ Koman</td><td class="num">~35</td><td>Aklakelis iki užtvankos; keltas su automobiliais plaukia tik nuo balandžio 15 d.</td></tr>
+          <tr><td>Tepelenë ↔ Gjirokastra</td><td class="num">~30</td><td>Gjirokastra yra 30 km į pietus nuo sankryžos.</td></tr>
         </tbody>
       </table></div>
     </section>
-
     <section>
-      <h3>Rizikos pagal dienas</h3>
+      <h3>Rizikos</h3>
       <div class="tblwrap"><table>
         <thead><tr><th>Diena</th><th>Rizika</th><th>Lygis</th><th>Ką daryti</th></tr></thead>
         <tbody>
-          <tr><td>D2–D3</td><td>Sniegas ar lavinos ant Qafa e Thorës perėjos (2024 m. gruodį ir 2026 m. vasarį kelias buvo ribojamas).</td><td><span class="pill c">didelė įtaka</span></td><td>7:00 sprendimas. Planas B: diena prie Shkodër ežero ir Komani laivas D3, Theth atsisakoma.</td></tr>
-          <tr><td>D4</td><td>Koman kelias lėtas; nuomos sutartis gali jį drausti; laivas atšaukiamas dėl vėjo.</td><td><span class="pill w">vidutinė</span></td><td>Pervežimas iš Shkodër arba išvykimas 7:00. Jei laivo nėra – ramus rytas Shkodër, anksčiau į Tiraną.</td></tr>
-          <tr><td>D5</td><td>Elbasano–Qafë Thanë kelias platinamas iki 2027 m.; 2026 m. vasarį nuošliauža jį buvo uždariusi 11 dienų.</td><td><span class="pill w">vidutinė</span></td><td>Ryte Google Maps. Jei uždaryta – variantas C (Gjirokastra tiesiai per SH4).</td></tr>
-          <tr><td>D6</td><td>Ersekë–Leskovik: ~23 km žvyro, apie valandą. Pavasarį galimas sniegas ties 1 169 m.</td><td><span class="pill w">vidutinė</span></td><td>Pasiklauskite Korčės viešbutyje. Planas B: Korčė → Elbasanas → Beratas, D7 Beratas → oro uostas (2 val.).</td></tr>
-          <tr><td>D7</td><td>3,5 val. kelio prieš 15:35 skrydį.</td><td><span class="pill c">didelė įtaka</span></td><td>Išvykti 10:00. Bagažo priėmimas baigiasi likus 40 min. iki skrydžio.</td></tr>
+          <tr><td>D2–D3</td><td>Sniegas ar lavinos perėjoje (2024 m. gruodį ir 2026 m. vasarį kelias buvo ribojamas).</td><td><span class="pill c">didelė įtaka</span></td><td>Skirtukas „Orai“ ir 7:00 sprendimas. Planas B – diena prie Shkodër ežero.</td></tr>
+          <tr><td>D4</td><td>Koman kelias lėtas, nuomos sutartis gali jį drausti, laivas gali neplaukti dėl vėjo.</td><td><span class="pill w">vidutinė</span></td><td>Išvykimas 7:00 arba pervežimas iš Shkodër.</td></tr>
+          <tr><td>D5 (A, B)</td><td>Elbasano–Qafë Thanë kelias platinamas; 2026 m. vasarį nuošliauža jį buvo uždariusi 11 dienų.</td><td><span class="pill w">vidutinė</span></td><td>Ryte Google Maps; jei uždaryta – variantas C.</td></tr>
+          <tr><td>D6 (A, B)</td><td>Ersekë–Leskovik: ~23 km žvyro; pavasarį galimas sniegas ties 1 169 m.</td><td><span class="pill w">vidutinė</span></td><td>Paklauskite Korčės viešbutyje; jei uždaryta, Korčė → Elbasanas → Beratas.</td></tr>
+          <tr><td>D7</td><td>Kelias į oro uostą prieš ~15:35 skrydį.</td><td><span class="pill c">didelė įtaka</span></td><td>A ir B: išvykti 10:00. C: tik ~2 val. kelio.</td></tr>
         </tbody>
       </table></div>
-    </section>
-
-    <section>
-      <h3>Trys variantai</h3>
-      <div class="tblwrap"><table>
-        <thead><tr><th>Variantas</th><th>D5–D7</th><th class="num">km</th><th class="num">Vairavimas</th><th>Kam tinka</th></tr></thead>
-        <tbody>
-          <tr><td><b>A. Pilnas žiedas</b> (šis planas)</td><td>Ohridas dieną → Korčė → SH75 → Benja → Gjirokastra → TIA</td><td class="num">~1 170</td><td class="num">~25,5 h</td><td>Didžiausia įvairovė; jei 5 val. dienos neglumina.</td></tr>
-          <tr><td><b>B. Be sienos</b></td><td>Tas pats, tik vietoj Ohrido – Lin kaimas ir Pogradecas Albanijos pusėje</td><td class="num">~1 125</td><td class="num">~24,5 h</td><td>D5 tampa ramesnė, nereikia žaliosios kortelės (sutaupoma ~50 € grupei).</td></tr>
-          <tr><td><b>C. Saugus pietų ratas</b></td><td>D5 Tirana → Gjirokastra (pilis tą pačią dieną) · D6 Benja ir Përmet → Beratas · D7 Beratas → TIA (2 val.)</td><td class="num">~1 085</td><td class="num">~22,5 h</td><td>Visi keliai asfaltuoti, paskutinė diena trumpa. Prarandate Ohridą, Korčę ir SH75.</td></tr>
-        </tbody>
-      </table></div>
-      <p>Šiaurinė dalis (D1–D4) visuose variantuose ta pati. Jei Korčės ir Gjirokastros nakvynes rezervuosite su nemokamu atšaukimu, tarp A ir C galėsite rinktis dar D4 vakarą Tiranoje, pagal orus ir nuovargį.</p>
-    </section>
-
-    <section>
-      <h3>Trys klausimai grupei</h3>
-      <ul>
-        <li>Ar visi sutinka su dviem ~5 val. vairavimo dienomis iš eilės (D5 ir D6)? Jei bent vienas abejoja – variantas C.</li>
-        <li>Ar Ohridas vertas dviejų sienų ir ~50 € mokesčio, ar užtenka ežero iš Albanijos pusės?</li>
-        <li>Ar skrisite tik su rankiniu bagažu? Nuo to priklauso, kiek atsargos reikia D7.</li>
-      </ul>
     </section>
   </div>
 </div>
@@ -290,12 +501,12 @@ footer{font-size:12px;color:var(--muted);margin-top:30px}
   <div class="prose">
     <section>
       <h2>Nakvynės</h2>
-      <p>Nuorodos atidaro „Booking.com“ paiešką su jūsų datomis ir 4 suaugusiais. Kainos orientacinės, už dvivietį kambarį. Rinkitės nemokamą atšaukimą: Theth priklauso nuo oro, o D5–D6 galite keisti į variantą C.</p>
+      <p>Nuorodos atidaro „Booking.com“ paiešką su jūsų datomis ir 4 suaugusiais. Kainos orientacinės, už dvivietį kambarį. Rinkitės nemokamą atšaukimą. Lentelė keičiasi pagal pasirinktą variantą.</p>
       <div class="tblwrap"><table>
         <thead><tr><th>Naktis</th><th>Vieta</th><th>Siūlymas</th><th>~Kaina</th><th>Nuoroda</th></tr></thead>
         <tbody id="staysbody"></tbody>
       </table></div>
-      <p class="src">Velykų savaitgalį (03-27/28) Shkodër ir Theth kainos didesnės, vietų mažiau. Theth svečių namų dalis rezervuojama tik per WhatsApp; prieš mokėdami patvirtinkite, kad kovo pabaigoje jie dirba.</p>
+      <p class="src">Velykų savaitgalį (03-27/28) Shkodër ir Theth kainos didesnės. Theth svečių namų dalis rezervuojama tik per WhatsApp – patvirtinkite, kad kovo pabaigoje jie dirba. Homemade Food Lili Berate (variantas C) dirba tik darbo dienų vakarais ir rezervuojamas per WhatsApp, dažnai prieš kelias savaites.</p>
     </section>
   </div>
 </div>
@@ -307,21 +518,9 @@ footer{font-size:12px;color:var(--muted);margin-top:30px}
       <h2>Biudžetas vienam žmogui</h2>
       <div class="tblwrap"><table>
         <thead><tr><th>Straipsnis</th><th>Skaičiavimas</th><th class="num">€ / žm.</th></tr></thead>
-        <tbody>
-          <tr><td>Skrydžiai Vilnius ⇄ Tirana</td><td>Wizz Air, tiesioginis, mažas bagažas</td><td class="num">60–150</td></tr>
-          <tr><td>Automobilio nuoma</td><td>7 paros, pilnas draudimas, antras vairuotojas</td><td class="num">60–100</td></tr>
-          <tr><td>Sienos mokestis (Š. Makedonija)</td><td>~50 € grupei; variante B ir C – 0</td><td class="num">12–15</td></tr>
-          <tr><td>Kuras</td><td>~1 170 km × 6,5 l/100 km ≈ 76 l × ~2,0 €</td><td class="num">38–45</td></tr>
-          <tr><td>Kelių mokesčiai, parkavimas</td><td>Thumanë–Kashar, miestai, Benja</td><td class="num">8–12</td></tr>
-          <tr><td>Komani privatus laivas</td><td>170 € laivui</td><td class="num">43</td></tr>
-          <tr><td>Nakvynės, 6 naktys</td><td>Mišrus variantas, dalis su pusryčiais</td><td class="num">130–200</td></tr>
-          <tr><td>Maistas</td><td>25–35 € per dieną × 7</td><td class="num">175–245</td></tr>
-          <tr><td>Bilietai</td><td>Pilys, muziejai, bokštas</td><td class="num">15–20</td></tr>
-          <tr><td>Ryšys</td><td>eSIM arba vietinė SIM</td><td class="num">5–10</td></tr>
-          <tr><td><b>Iš viso</b></td><td></td><td class="num"><b>~545–840</b></td></tr>
-        </tbody>
+        <tbody id="budgetbody"></tbody>
       </table></div>
-      <p class="src">Jei į Koman važiuosite pervežimu, pridėkite ~10–15 € žmogui. Grynųjų reikės daugiau, nei įprasta: Theth, Rozafa, Lulash Zelna, Odaja ir dalis degalinių kortelių nepriima.</p>
+      <p class="src">Grynųjų reikės daugiau nei įprasta: Theth, Rozafa, Lulash Zelna, Odaja ir dalis degalinių kortelių nepriima.</p>
     </section>
     <section>
       <h3>Kur pilti kurą</h3>
@@ -329,7 +528,7 @@ footer{font-size:12px;color:var(--muted);margin-top:30px}
         <thead><tr><th>Diena</th><th>Degalinė</th><th>Kodėl čia</th></tr></thead>
         <tbody id="fuelbody"></tbody>
       </table></div>
-      <p class="src">2026 m. Albanijoje 95 benzinas kainavo ~178–188 ALL/l (~1,9–2,0 €), dyzelinas ~192–206 ALL/l (~2,0–2,2 €); Šiaurės Makedonijoje abu ~100 MKD/l (~1,6 €). Šaltiniai: <a href="https://openvan.camp/en/tools/fuel-prices/albania">OpenVan</a>, <a href="https://www.globalpetrolprices.com/Albania/diesel_prices/">GlobalPetrolPrices</a>.</p>
+      <p class="src">2026 m. Albanijoje 95 benzinas ~178 ALL/l (~1,89 €), dyzelinas ~192 ALL/l (~2,04 €); Šiaurės Makedonijoje abu ~100 MKD/l (~1,62 €). <a href="https://openvan.camp/en/tools/fuel-prices/albania">OpenVan AL</a>, <a href="https://openvan.camp/en/tools/fuel-prices/north-macedonia">OpenVan MK</a>.</p>
     </section>
   </div>
 </div>
@@ -339,393 +538,498 @@ footer{font-size:12px;color:var(--muted);margin-top:30px}
   <div class="prose">
     <section>
       <h2>Ką padaryti iš anksto</h2>
-      <p>Varnelės išsaugomos tik šioje naršyklėje.</p>
+      <p>Varnelės išsaugomos tik šiame įrenginyje.</p>
       <div id="checks" style="display:grid;gap:18px"></div>
     </section>
   </div>
 </div>
 
-<footer>Atstumai ir laikai – apytiksliai, pagal pervežėjų ir keliautojų duomenis; kelionės dieną vadovaukitės Google Maps. Žemėlapis šiame puslapyje yra schema, ne navigacija.</footer>
+<div class="btnrow noprint" style="margin-top:28px">
+  <button class="btn2" type="button" id="sharebtn">Dalintis nuoroda</button>
+  <button class="btn2" type="button" id="printbtn">Spausdinti / PDF</button>
+  <span class="status" id="sharestatus" role="status"></span>
+</div>
+<footer>Atstumai ir laikai apytiksliai. Žemėlapis © OpenStreetMap bendruomenė; maršrutai – OSRM; orai ir aukščiai – Open-Meteo. Puslapis veikia ir be interneto, jei bent kartą atidarytas su ryšiu.</footer>
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-/* ---------- data ---------- */
-const C = {1:'#d1495b',2:'#1f9e8f',3:'#d99a26',4:'#3a7ca5',5:'#8a5cc0',6:'#5a8f3a',7:'#c2603d'};
-const CAT = {
-  sight:{l:'Lankytina vieta'}, food:{l:'Maistas'}, fuel:{l:'Degalinė'}, stay:{l:'Nakvynė'},
-  hike:{l:'Pėsčiomis / laivu'}, move:{l:'Kelias, siena'}
-};
-const bk = (ss,ci,co,rooms=2,extra='') => `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(ss)}&checkin=${ci}&checkout=${co}&group_adults=4&no_rooms=${rooms}${extra}`;
+/* ================= helpers ================= */
+const $=s=>document.querySelector(s);
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const bk=(ss,ci,co,rooms=2,extra='')=>`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(ss)}&checkin=${ci}&checkout=${co}&group_adults=4&no_rooms=${rooms}${extra}`;
+const C={1:'#d1495b',2:'#1f9e8f',3:'#d99a26',4:'#3a7ca5',5:'#8a5cc0',6:'#5a8f3a',7:'#c2603d'};
+const CAT={sight:'Lankytina vieta',food:'Maistas',fuel:'Degalinė',stay:'Nakvynė',hike:'Pėsčiomis / laivu',move:'Kelias, siena'};
+const RATE={EUR:1,ALL:94,MKD:61.6};
 
-const DAYS = [
-{id:1, date:'Pn 03-26', title:'Oro uostas → Kruja → Mrizi i Zanave → Shkodër', km:115, drive:'~2 h', night:'Shkodër',
+/* ================= data ================= */
+const TIRANA_APT={lat:41.3215,lng:19.8145};
+const BASE=[
+{id:1,date:'Pn 03-26',title:'Oro uostas → Kruja → Mrizi i Zanave → Shkodër',km:115,drive:'~2 h',night:'Shkodër',
  sum:'Trumpa pirma diena: pilis ir turgus pakeliui, vakarienė garsiausiame šalies ūkio restorane.',
- notes:[{k:'info',t:'<b>Kodėl Kruja šiandien:</b> Skanderbego muziejus pirmadieniais uždarytas, o pro Krują dar kartą važiuosite būtent pirmadienį.'},
-        {k:'warn',t:'<b>Planas B:</b> jei skrydis vėluoja daugiau nei valandą, muziejų praleiskite ir eikite tik į turgų bei pilies kiemą.'}],
- route:[[19.72,41.414],[19.71,41.482],[19.794,41.507],[19.71,41.482],[19.71,41.63],[19.645,41.78],[19.673,41.899],[19.58,41.98],[19.515,42.063]],
+ notes:[{k:'info',t:'<b>Kodėl Kruja šiandien:</b> Skanderbego muziejus pirmadieniais uždarytas, o pro Krują dar kartą važiuosite būtent pirmadienį.'},{k:'warn',t:'<b>Planas B:</b> jei skrydis vėluoja daugiau nei valandą, muziejų praleiskite ir eikite tik į turgų bei pilies kiemą.'}],
  stops:[
-  {t:'13:55',n:'Tiranos oro uostas (TIA)',c:'move',lat:41.4135104,lng:19.7193723,pid:'ChIJf2DFEgctUBMR24ZSLfbBVFI',d:'Nusileidimas. Tikslų laiką žiūrėkite bilietuose; pasų kontrolė paprastai trunka 10–20 min.'},
-  {t:'14:00',n:'Automobilio atsiėmimas',c:'move',d:'Nufilmuokite kėbulą, ratlankius, stiklą, kuro lygį ir ridą. Patikrinkite atsarginį ratą, žaliąją kortelę su MK langeliu ir grandines. Paprašykite parodyti draudžiamų kelių sąrašą: Theth kelias turi būti leidžiamas, apie Koman paklauskite atskirai.'},
-  {t:'14:30',n:'Grynieji ir ryšys',c:'move',d:'Bankomate rinkitės „without conversion“. Pradžiai ~20 000 ALL grupei: Theth, Rozafa, Lulash Zelna ir Odaja priima tik grynuosius.'},
-  {t:'15:20',n:'Skanderbego muziejus, Krujos pilis',c:'sight',lat:41.5075368,lng:19.7940481,pid:'ChIJh1W_iNrNURMRFePwlvBt01A',d:'Atidaryta antradienį–sekmadienį 9–17. Bilietas ~200–500 ALL. Pilies kieme dar Etnografinis muziejus ir vaizdas iki jūros.'},
-  {t:'17:00',n:'Krujos senasis turgus',c:'sight',lat:41.5073254,lng:19.7944047,pid:'ChIJibPCkNrNURMROp5e5uss1Tk',d:'Akmenimis grįsta gatvelė: kilimai, filigranas, qeleshe kepurės. Kainas derėkite; vakarop prekeiviai nuolaidesni.'},
+  {t:'13:55',n:'Tiranos oro uostas (TIA)',c:'move',lat:41.4135104,lng:19.7193723,pid:'ChIJf2DFEgctUBMR24ZSLfbBVFI',d:'Nusileidimas. Pasų kontrolė paprastai trunka 10–20 min.'},
+  {t:'14:00',n:'Automobilio atsiėmimas',c:'move',d:'Kontrolinis sąrašas – skirtuke „Automobilis“. Svarbiausia: nufilmuokite kėbulą, patikrinkite atsarginį ratą, žaliąją kortelę ir draudžiamų kelių sąrašą.'},
+  {t:'14:30',n:'Grynieji ir ryšys',c:'move',d:'Bankomate – „without conversion“. Pradžiai ~20 000 ALL grupei.'},
+  {t:'15:20',n:'Skanderbego muziejus, Krujos pilis',c:'sight',lat:41.5075368,lng:19.7940481,pid:'ChIJh1W_iNrNURMRFePwlvBt01A',d:'Atidaryta antradienį–sekmadienį 9–17. Bilietas ~200–500 ALL. Pilies kieme – Etnografinis muziejus.'},
+  {t:'17:00',n:'Krujos senasis turgus',c:'sight',walk:1,lat:41.5073254,lng:19.7944047,pid:'ChIJibPCkNrNURMROp5e5uss1Tk',d:'Kilimai, filigranas, qeleshe kepurės. Kainas derėkite.'},
   {t:'18:00',n:'Kastrati, Fushë-Krujë',c:'fuel',lat:41.4825379,lng:19.7102019,pid:'ChIJKeaD9WjTURMRY5kfxlRLmSU',d:'Pilnas bakas prieš šiaurę, prie pat A1.'},
-  {t:'18:50',n:'Mrizi i Zanave, Fishtë',c:'food',lat:41.8991545,lng:19.6730191,pid:'ChIJZ1msF5rkURMR1mv-ndiy5Sk',d:'Slow Food ūkis. Vakarienė 18–22. Prašykite degustacinio rinkinio: gjizë, sallam, ėriena, ūkio vynas (~15–20 € žmogui). Penktadieniais pilna – rezervuokite per WhatsApp.',tel:'+355 69 210 8032'},
+  {t:'18:50',n:'Mrizi i Zanave, Fishtë',c:'food',lat:41.8991545,lng:19.6730191,pid:'ChIJZ1msF5rkURMR1mv-ndiy5Sk',d:'Slow Food ūkis. Vakarienė 18–22. Prašykite degustacinio rinkinio (~15–20 € žmogui). Rezervuokite per WhatsApp.',tel:'+355 69 210 8032'},
   {t:'21:00',n:'Hotel Tradita, Shkodër',c:'stay',lat:42.0626159,lng:19.5153935,pid:'ChIJY9W_AP4AThMRhd1CQ0Hsplc',d:'Tradicinis namas su parkavimu. Paprašykite pasaugoti didįjį bagažą per Theth naktį.',tel:'+355 68 484 2219',links:[{l:'Booking',u:bk('Hotel Tradita Shkoder','2027-03-26','2027-03-27')}]}
  ]},
-{id:2, date:'Š 03-27', title:'Shkodër → Qafa e Thorës → Theth', km:75, drive:'2–2,5 h', night:'Theth',
- sum:'Per 1 690 m perėją į Alpių slėnį. Popiet – žygis iki Grunas krioklio.',
- notes:[{k:'warn',t:'<b>7:00 sprendimas.</b> Patikrinkite kelių tarnybos (ARRSH) pranešimus ir paskambinkite į svečių namus. Jei perėja uždaryta arba leidžiami tik aukšti automobiliai – planas B: diena prie Shkodër ežero, o Komani laivą perkelkite į rytojų.'},
-        {k:'info',t:'Kelias iki Theth nuo 2021 m. asfaltuotas ir pravažiuojamas paprastu automobiliu. Kaime gatvės – žvyras.'}],
- route:[[19.515,42.063],[19.47,42.13],[19.44,42.21],[19.55,42.33],[19.65,42.398],[19.725,42.39],[19.764,42.405],[19.782,42.389]],
- foot:[[[19.782,42.389],[19.7956,42.3773]]],
+{id:2,date:'Š 03-27',title:'Shkodër → Qafa e Thorës → Theth',km:75,drive:'2–2,5 h',night:'Theth',
+ sum:'Per 1 690 m perėją į Alpių slėnį; popiet – žygis iki Grunas krioklio.',
+ notes:[{k:'warn',t:'<b>7:00 sprendimas.</b> Skirtukas „Orai“ → „Dabar“, kelių tarnybos (ARRSH) pranešimai ir skambutis svečių namams. Jei perėja uždaryta – diena prie Shkodër ežero, o Komani laivą perkelkite į rytojų.'},{k:'info',t:'Kelias iki Theth nuo 2021 m. asfaltuotas; kaime gatvės žvyruotos.'}],
  stops:[
-  {t:'7:00',n:'Sprendimas dėl kelio',c:'move',d:'ARRSH pranešimai, orų prognozė perėjai ir skambutis šeimininkams.'},
-  {t:'8:00',n:'Kastrati Energy, Shkodër',c:'fuel',lat:42.0573782,lng:19.5015784,pid:'ChIJE6ZxNC8BThMR3C2nWS7v1ow',d:'Papildykite iki pilno: kalnuose degalinių nėra. Čia pat nusipirkite užkandžių ir išsigryninkite – Theth bankomatų nėra.'},
-  {t:'9:15',n:'Bogë',c:'move',lat:42.398,lng:19.65,d:'Paskutinis kaimas prieš serpantinus; žiemą sniego valytuvai valo iki čia. Kava prieš kilimą.'},
-  {t:'9:45',n:'Qafa e Thorës perėja',c:'sight',lat:42.3898676,lng:19.7252226,pid:'ChIJg2SYwehyUhMRjDphEvqilIo',d:'~1 690 m. Apžvalgos aikštelė; kovo pabaigoje pakelėse dar sniego sienos. Leisdamiesi važiuokite žema pavara.'},
-  {t:'10:45',n:'Molla Guest House, Theth',c:'stay',lat:42.4048042,lng:19.7638982,pid:'ChIJhQZlk4RtUhMRVEjaLlU3EoE',d:'Šeimos svečių namai su židiniu, vakariene ir pusryčiais. Prieš rezervuodami patvirtinkite, kad kovo pabaigoje dirba.',tel:'+355 68 401 0995',links:[{l:'Booking: Theth',u:bk('Theth','2027-03-27','2027-03-28')}]},
-  {t:'12:30',n:'Grunas krioklys',c:'hike',nav:false,lat:42.3773211,lng:19.7956436,pid:'ChIJz5oawuRtUhMR0KIUJd0C2EA',d:'Pėsčiomis ~1 val. į vieną pusę, paskutinės 15 min stačiau. Pavasarį krioklys vandeningiausias; takas gali būti šlapias ar vietomis apsnigtas.'},
-  {t:'15:30',n:'Theth bažnyčia',c:'sight',lat:42.389459,lng:19.7816043,pid:'ChIJwf4_TABtUhMRz2cl_34jK20',d:'Slėnio simbolis kalnų fone; popiet šviesa geriausia.'},
-  {t:'16:00',n:'Susitaikymo bokštas (Kulla e Ngujimit)',c:'sight',lat:42.3856862,lng:19.7825699,pid:'ChIJeeVK0HdtUhMRs4pHJWdKEfg',d:'~1,5 €. Kraujo keršto slėptuvė. Viduje paaiškinimų nedaug, todėl prieš tai paskaitykite apie Kanun paprotinę teisę.'},
-  {t:'18:30',n:'Vakarienė svečių namuose',c:'food',d:'Naminis maistas: flija, ožkiena, raki. Vakare elektra ir internetas gali trūkinėti.'}
+  {t:'8:00',n:'Kastrati Energy, Shkodër',c:'fuel',lat:42.0573782,lng:19.5015784,pid:'ChIJE6ZxNC8BThMR3C2nWS7v1ow',d:'Papildykite iki pilno: kalnuose degalinių nėra. Išsigryninkite – Theth bankomatų nėra.'},
+  {t:'9:15',n:'Bogë',c:'move',lat:42.398,lng:19.65,d:'Paskutinis kaimas prieš serpantinus; žiemą valytuvai valo iki čia. Kava prieš kilimą.'},
+  {t:'9:45',n:'Qafa e Thorës perėja',c:'sight',lat:42.3898676,lng:19.7252226,pid:'ChIJg2SYwehyUhMRjDphEvqilIo',d:'~1 690 m. Apžvalgos aikštelė. Leisdamiesi važiuokite žema pavara (automate – režimas L arba rankinis).'},
+  {t:'10:45',n:'Molla Guest House, Theth',c:'stay',lat:42.4048042,lng:19.7638982,pid:'ChIJhQZlk4RtUhMRVEjaLlU3EoE',d:'Šeimos svečių namai su židiniu, vakariene ir pusryčiais. Patvirtinkite, kad kovo pabaigoje dirba.',tel:'+355 68 401 0995',links:[{l:'Booking: Theth',u:bk('Theth','2027-03-27','2027-03-28')}]},
+  {t:'12:30',n:'Grunas krioklys',c:'hike',lat:42.3773211,lng:19.7956436,pid:'ChIJz5oawuRtUhMR0KIUJd0C2EA',d:'Pėsčiomis ~1 val. į vieną pusę. Pavasarį vandeningiausias; takas gali būti šlapias.'},
+  {t:'15:30',n:'Theth bažnyčia',c:'sight',walk:1,lat:42.389459,lng:19.7816043,pid:'ChIJwf4_TABtUhMRz2cl_34jK20',d:'Slėnio simbolis; popiet šviesa geriausia.'},
+  {t:'16:00',n:'Susitaikymo bokštas',c:'sight',walk:1,lat:42.3856862,lng:19.7825699,pid:'ChIJeeVK0HdtUhMRs4pHJWdKEfg',d:'~1,5 €. Kraujo keršto slėptuvė; prieš tai paskaitykite apie Kanun.'},
+  {t:'18:30',n:'Vakarienė svečių namuose',c:'food',d:'Flija, ožkiena, raki. Elektra ir internetas gali trūkinėti.'}
  ]},
-{id:3, date:'S 03-28', title:'Mėlynoji akis → Mesi tiltas → Rozafa (Velykos)', km:95, drive:'~2 h 45', night:'Shkodër',
+{id:3,date:'S 03-28',title:'Mėlynoji akis → Mesi tiltas → Rozafa (Velykos)',km:95,drive:'~2 h 45',night:'Shkodër',
  sum:'Rytinis žygis iki Mėlynosios akies, grįžimas per perėją, saulėlydis Rozafos pilyje.',
- notes:[{k:'info',t:'Naktį laikrodis pasukamas valanda į priekį. Saulė leisis ~19:10.'},
-        {k:'warn',t:'Kelias Theth–Nderlysaj (~6 km) – žvyrkelis. Paklauskite šeimininkų, ar tądien jį galima pravažiuoti lengvuoju; kitu atveju užsakykite vietinį 4x4.'}],
- route:[[19.764,42.405],[19.782,42.389],[19.7676,42.3551],[19.782,42.389],[19.725,42.39],[19.65,42.398],[19.55,42.33],[19.44,42.21],[19.575,42.1145],[19.515,42.063],[19.4936,42.0464],[19.4778,42.0543],[19.515,42.063]],
- foot:[[[19.7676,42.3551],[19.7461,42.3642]]],
+ notes:[{k:'info',t:'Naktį laikrodis pasukamas valanda į priekį. Saulė leisis ~19:10.'},{k:'warn',t:'Kelias Theth–Nderlysaj (~6 km) – žvyrkelis. Paklauskite šeimininkų, ar tądien jį pravažiuosite lengvuoju automobiliu; jei ne – vietinis 4x4.'}],
  stops:[
-  {t:'8:15',n:'Išvykimas iš Theth',c:'move',d:'Po pusryčių. Atsiskaitykite grynaisiais.'},
-  {t:'8:40',n:'Mėlynosios akies aikštelė, Nderlysaj',c:'move',lat:42.355058,lng:19.767599,pid:'ChIJAwIrdwATUhMR3N0T3TXzLDo',d:'Parkavimas ~200 ALL. Iš čia tik pėsčiomis.'},
-  {t:'9:40',n:'Mėlynoji akis (Syri i Kaltër)',c:'hike',nav:false,lat:42.3642226,lng:19.7461193,pid:'ChIJu41-xrJyUhMRstXlqAEBBOU',d:'45–60 min pėsčiomis į vieną pusę. Ledinis turkio spalvos baseinas po kriokliu.'},
-  {t:'11:15',n:'Restorant Lulash Zelna',c:'food',lat:42.3553263,lng:19.7663358,pid:'ChIJtywLc6cTUhMRLgYTD5bwJ1w',d:'Prie aikštelės, šalia krioklių. Tik grynieji. Upėtakis su vynu ~1 500 ALL, ožkos šonkauliai.',tel:'+355 68 839 4134'},
-  {t:'12:30',n:'Atgal per perėją',c:'move',d:'Theth → Qafa e Thorës → Koplik, ~2 val.'},
-  {t:'15:15',n:'Mesi tiltas',c:'sight',lat:42.1145137,lng:19.5749151,pid:'ChIJDw_WTXEAUhMRye0txn9CQG0',d:'1768 m. osmanų tiltas. Geriausias kadras – nuo naujojo tilto šalia.'},
-  {t:'16:15',n:'Hotel Tradita, Shkodër',c:'stay',lat:42.0626159,lng:19.5153935,pid:'ChIJY9W_AP4AThMRhd1CQ0Hsplc',d:'Įsiregistravimas, dušas, valanda poilsio.',links:[{l:'Booking',u:bk('Hotel Tradita Shkoder','2027-03-28','2027-03-29')}]},
-  {t:'17:45',n:'Rozafa pilis',c:'sight',lat:42.0464387,lng:19.4936166,pid:'ChIJbUZkhUABThMR7u_f5y_mnWI',d:'400 ALL, tik grynais. Slidūs akmenys. Saulėlydis virš ežero ir trijų upių santakos.'},
-  {t:'20:00',n:'Restaurant Arbri, Shiroka',c:'food',lat:42.0543532,lng:19.4778501,pid:'ChIJtWVEczQBThMR6BK_aUraoN4',d:'Velykų vakarienė prie ežero: tavë krapi (karpis), ungurys molio puode. Šventinį vakarą rezervuokite.',tel:'+355 69 542 3333'}
+  {t:'8:15',n:'Išvykimas iš Theth',c:'move',lat:42.4048042,lng:19.7638982,d:'Po pusryčių; atsiskaitykite grynaisiais.'},
+  {t:'8:40',n:'Mėlynosios akies aikštelė, Nderlysaj',c:'move',lat:42.355058,lng:19.767599,pid:'ChIJAwIrdwATUhMR3N0T3TXzLDo',d:'Parkavimas ~200 ALL. Toliau tik pėsčiomis.'},
+  {t:'9:40',n:'Mėlynoji akis',c:'hike',lat:42.3642226,lng:19.7461193,pid:'ChIJu41-xrJyUhMRstXlqAEBBOU',d:'45–60 min pėsčiomis į vieną pusę. Ledinis turkio spalvos baseinas.'},
+  {t:'11:15',n:'Restorant Lulash Zelna',c:'food',walk:1,lat:42.3553263,lng:19.7663358,pid:'ChIJtywLc6cTUhMRLgYTD5bwJ1w',d:'Prie aikštelės, tik grynieji. Upėtakis, ožkos šonkauliai.',tel:'+355 68 839 4134'},
+  {t:'15:15',n:'Mesi tiltas',c:'sight',lat:42.1145137,lng:19.5749151,pid:'ChIJDw_WTXEAUhMRye0txn9CQG0',d:'1768 m. osmanų tiltas; geriausias kadras – nuo naujojo tilto.'},
+  {t:'16:15',n:'Hotel Tradita, Shkodër',c:'stay',lat:42.0626159,lng:19.5153935,pid:'ChIJY9W_AP4AThMRhd1CQ0Hsplc',d:'Įsiregistravimas ir valanda poilsio.',links:[{l:'Booking',u:bk('Hotel Tradita Shkoder','2027-03-28','2027-03-29')}]},
+  {t:'17:45',n:'Rozafa pilis',c:'sight',lat:42.0464387,lng:19.4936166,pid:'ChIJbUZkhUABThMR7u_f5y_mnWI',d:'400 ALL tik grynais. Slidūs akmenys. Saulėlydis virš ežero ir upių santakos.'},
+  {t:'20:00',n:'Restaurant Arbri, Shiroka',c:'food',lat:42.0543532,lng:19.4778501,pid:'ChIJtWVEczQBThMR6BK_aUraoN4',d:'Velykų vakarienė prie ežero: karpis, ungurys molio puode. Rezervuokite.',tel:'+355 69 542 3333'}
  ]},
-{id:4, date:'Pr 03-29', title:'Komani fjordas → Tirana', km:190, drive:'~5 h + 4 h laivu', night:'Tirana',
- sum:'Rytas laive tarp uolų, popiet ilgas pervažiavimas į sostinę, vakare miestas pėsčiomis.',
- notes:[{k:'warn',t:'<b>Nuomos sutartis.</b> Kelias Vau i Dejës–Koman rekonstruojamas, paskutiniai ~20 km trunka apie valandą. Kai kurios nuomos bendrovės jį draudžia. Jei jūsų draudžia – paprašykite laivo operatoriaus pervežimo iš Shkodër ir automobilį palikite prie viešbučio; į Tiraną tada atvyksite ~45 min vėliau.'},
-        {k:'info',t:'Velykų pirmadienis Albanijoje – nedarbo diena, muziejai uždaryti. Todėl vakaras skirtas miestui, o Kruja perkelta į D1.'}],
- route:[[19.515,42.063],[19.63,42.01],[19.72,42.06],[19.826,42.109],[19.72,42.06],[19.663,42.023],[19.6,41.9],[19.643,41.754],[19.71,41.63],[19.71,41.482],[19.74,41.38],[19.818,41.328]],
- foot:[[[19.826,42.109],[19.85,42.16],[19.818,42.203]]],
+{id:4,date:'Pr 03-29',title:'Komani fjordas → Tirana',km:190,drive:'~5 h + 4 h laivu',night:'Tirana',
+ sum:'Rytas laive tarp uolų, popiet pervažiavimas į sostinę, vakare miestas pėsčiomis.',
+ notes:[{k:'warn',t:'<b>Nuomos sutartis.</b> Kai kurios bendrovės Koman kelią draudžia. Tada automobilį palikite Shkodër ir užsisakykite laivo operatoriaus pervežimą; į Tiraną atvyksite ~45 min vėliau.'},{k:'info',t:'Velykų pirmadienis – nedarbo diena, muziejai uždaryti.'}],
  stops:[
-  {t:'7:00',n:'Išvykimas iš Shkodër',c:'move',d:'Byrek ir kava kelionei. Iki Koman realiai 1,5–2 val.'},
-  {t:'9:00',n:'Komani uostas',c:'move',lat:42.1088038,lng:19.8264786,pid:'ChIJgeib_-cdUhMRYNgj_j0Z4KU',d:'Automobilis lieka mokamoje aikštelėje prie užtvankos. Uoste veikia kavinė.'},
-  {t:'9:30',n:'Privatus laivas: Komani fjordas ir Šalos upė',c:'hike',nav:false,lat:42.2029626,lng:19.8176954,pid:'ChIJpfwHneQRUhMRdAbplLuANDo',d:'9:30–13:30. ~170 € laivui (iki 7 žmonių). Šalos žiotyse paprašykite 30–40 min sustojimo. Ant vandens vėjuota: kepurė, pirštinės, striukė.'},
-  {t:'14:45',n:'Perla, Vau i Dejës',c:'food',lat:42.0227805,lng:19.6628384,pid:'ChIJPTw9ZLT_URMR3NUHwusupuc',d:'Vėlyvi pietūs terasoje virš ežero. Aptarnauja neskubėdami – skirkite valandą.'},
-  {t:'16:00',n:'Kastrati, Lezhë',c:'fuel',lat:41.7535368,lng:19.642685,pid:'ChIJ12ZOKsPfURMRG0EyXzuahiY',d:'Papildymas pakeliui į Tiraną.'},
-  {t:'17:15',n:'Butas su parkavimu, Tirana',c:'stay',lat:41.3215,lng:19.8145,d:'Tarp Blloku ir Skanderbego aikštės. Centre gatvėje pasistatyti sunku, o vakare automobilio nereikės.',links:[{l:'Booking: Tirana su parkavimu',u:bk('Tirana','2027-03-29','2027-03-30',1,'&nflt=hotelfacility%3D2')}]},
-  {t:'18:00',n:'Skanderbego aikštė',c:'sight',lat:41.3281791,lng:19.8184475,pid:'ChIJObkn_A8xUBMRFY95E3CdgpE',d:'Et’hem Bey mečetė, laikrodžio bokštas, opera. Iš čia bulvaru pėsčiomis iki piramidės – 10 min.'},
-  {t:'18:40',n:'Tiranos piramidė',c:'sight',lat:41.3230699,lng:19.8214613,pid:'ChIJ13HJcBsxUBMRg0s9vq3gwuA',d:'Buvęs diktatoriaus muziejus, dabar atviri laiptai į viršų. Saulėlydis ~19:10.'},
-  {t:'20:00',n:'Oda',c:'food',lat:41.3315272,lng:19.8246378,pid:'ChIJ4WtZ4BAxUBMRHZQho580f80',d:'Tradicinė virtuvė: fërgesë, qofte, įdaryti pipirai. Dažnai pilna – rezervuokite. Po vakarienės – Blloku barai.',tel:'+355 69 966 8881'}
- ]},
-{id:5, date:'An 03-30', title:'Elbasanas → Ohridas → Šv. Naumas → Korčė', km:230, drive:'~4 h 45', night:'Korčė',
- sum:'Aplink Ohrido ežerą: UNESCO senamiestis Šiaurės Makedonijoje, vienuolynas, šaltiniai ir vakaras Korčės turguje.',
- notes:[{k:'warn',t:'Elbasano–Qafë Thanë kelias platinamas. Ryte patikrinkite Google Maps; jei atkarpa uždaryta, rinkitės variantą C.'},
-        {k:'info',t:'<b>Be sienos (variantas B):</b> iš Elbasano į Lin kaimą → Pogradecas → Drilonas → Korčė. Nereikia žaliosios kortelės, bet neliks Ohrido senamiesčio.'}],
- route:[[19.818,41.328],[19.9,41.22],[20.083,41.114],[20.32,41.18],[20.54,41.07],[20.6,41.07],[20.68,41.175],[20.79,41.115],[20.815,41.106],[20.80,40.99],[20.7407,40.914],[20.7132,40.8996],[20.6665,40.902],[20.70,40.71],[20.775,40.618]],
- stops:[
-  {t:'7:30',n:'Išvykimas iš Tiranos',c:'move',d:'Greitkeliu per Krabos tunelį, ~50 min iki Elbasano.'},
-  {t:'8:20',n:'Elbasano pilis',c:'sight',lat:41.1138634,lng:20.082813,pid:'ChIJFU4HZlJCUBMRXTuI9Nb3JSI',d:'Nemokama. Kava terasoje ant sienų; romėnų, Bizantijos ir osmanų sluoksniai. 30 min.'},
-  {t:'10:15',n:'Qafë Thanë sienos perėja',c:'move',lat:41.0686,lng:20.6003,d:'Reikia paso, automobilio registracijos liudijimo ir žaliosios kortelės. Eilė paprastai trumpesnė nei 30 min, darbo dienomis 10–15 val. trumpiausia.',links:[{l:'Eilės gyvai',u:'https://nakordoni.eu/en/id/id_529/real_time/1'}]},
-  {t:'10:45',n:'Samuelio tvirtovė, Ohridas',c:'sight',lat:41.1151825,lng:20.7908451,pid:'ChIJU8UHdbzcUBMRXewjh6mxK2o',d:'Nuo tvirtovės žemyn: Plaošnikas → antikinis teatras → Šv. Sofija. Parkuokitės mokamoje aikštelėje prie senamiesčio ribos.'},
-  {t:'12:30',n:'Kaneo restoranas ir Šv. Jono bažnyčia',c:'food',lat:41.1110343,lng:20.790203,pid:'ChIJM_zVBrrcUBMRUUsu8_4V91Y',d:'Upėtakis ant vandens; brangiau nei Albanijoje. Pigiau – burekas su jogurtu senamiestyje. Bažnyčia ant skardžio – už 2 min.'},
-  {t:'14:15',n:'Makpetrol Biljanini Izvori',c:'fuel',lat:41.106263,lng:20.8152797,pid:'ChIJEbIidVrbUBMRbfvi2mdx7xE',d:'Pilkite pilną: čia kuras ~20 % pigesnis nei Albanijoje, o toliau iki Šv. Naumo degalinių nėra. Mokėkite kortele.'},
-  {t:'14:45',n:'Šv. Naumo vienuolynas',c:'sight',lat:40.9140127,lng:20.7406778,pid:'ChIJ21jWl0u-UBMRTUkiaHgaf1I',d:'Freskos, povai, Juodojo Drino šaltiniai. Jei liks laiko – valtelė po šaltinius.'},
-  {t:'15:30',n:'Tushemisht sienos perėja',c:'move',lat:40.9075,lng:20.729,d:'Už kelių minučių nuo vienuolyno; paprastai greita.'},
-  {t:'15:45',n:'Drilono parkas',c:'sight',lat:40.8995919,lng:20.7131695,pid:'ChIJGWYeMB6-UBMRo9d7LgBb9bs',d:'Gluosniai, šaltinių kanalai, gulbės. Kava prie vandens.'},
-  {t:'16:30',n:'Pogradeco krantinė',c:'sight',lat:40.9019266,lng:20.6664681,pid:'ChIJP7zYeACVUBMRPTHdInwOhGs',d:'Trumpas pasivaikščiojimas. Iki Korčės – 40 km lyguma.'},
-  {t:'17:45',n:'Hani i Pazarit, Korčė',c:'stay',lat:40.6181098,lng:20.7752483,pid:'ChIJGdes760LWhMRx8ES3Ihb0Qk',d:'Viešbutis sename karavansarajuje pačiame turguje; restorane vakarais gyva muzika. Pigiau – Old Bazaar Rooms.',tel:'+355 69 701 0055',links:[{l:'Booking: Hani i Pazarit',u:bk('Hani i Pazarit Korce','2027-03-30','2027-03-31')},{l:'Old Bazaar Rooms',u:bk('Old Bazaar Rooms Korce','2027-03-30','2027-03-31')}]},
-  {t:'18:30',n:'Korčės senasis turgus',c:'sight',lat:40.6176963,lng:20.7745021,pid:'ChIJZ6Xi-UIKWhMRvf-3GIQW1pg',d:'Atnaujintas osmanų turgus su barais ir krautuvėlėmis; gyviausia vakare.'},
-  {t:'20:00',n:'Taverna Vasili',c:'food',lat:40.6228186,lng:20.7819905,pid:'ChIJr-5IYmsKWhMRXQ6ToM63gyk',d:'Lakror (Korčės pyragas) kepamas pagal užsakymą – paskambinkite dieną prieš. Citrinų sriuba, petulla.',tel:'+355 69 204 8583'},
-  {t:'21:30',n:'Birra Korça',c:'food',lat:40.6112119,lng:20.7906588,pid:'ChIJq0Qs8DsKWhMR4o-5ClQNmGw',d:'Alaus sodas prie daryklos, dirba iki vidurnakčio. Nemokamos ekskursijos vyksta 10, 12 ir 14 val., į jas nespėsite.'}
- ]},
-{id:6, date:'Tr 03-31', title:'SH75: Korčė → Leskovikas → Benja → Përmet → Gjirokastra', km:240, drive:'~5 h 05', night:'Gjirokastra',
- sum:'Vaizdingiausias kelias plane: kalnų perėjos, Vjosos slėnis, karštosios versmės ir akmeninis miestas.',
- notes:[{k:'warn',t:'<b>Lėčiausia atkarpa:</b> Ersekë–Leskovik, ~23 km žvyro, apie valandą. Važiuokite 30–40 km/h. Aukščiausias taškas 1 169 m – pavasarį galimas sniegas.'},
-        {k:'warn',t:'<b>Planas B:</b> jei SH75 uždarytas, Korčė → Pogradecas → Elbasanas → Beratas (~3 val., nakvynė Berate), D7 Beratas → oro uostas (2 val.).'},
-        {k:'info',t:'Vairuotojai keičiasi Leskovike. Degustuoja tas, kuris toliau nevairuoja.'}],
- route:[[20.775,40.618],[20.74,40.47],[20.679,40.338],[20.66,40.25],[20.599,40.153],[20.5,40.11],[20.42,40.21],[20.4325,40.2444],[20.42,40.21],[20.353,40.234],[20.19,40.31],[20.021,40.297],[20.08,40.17],[20.139,40.073]],
- stops:[
-  {t:'7:45',n:'Kastrati, Korčė',c:'fuel',lat:40.6273301,lng:20.7703722,pid:'ChIJFUbJxEALWhMR4QoENiAfFBo',d:'Pilnas bakas: iki Përmet ~140 km kalnais, degalinių beveik nėra. Priima korteles, švarus WC.'},
-  {t:'8:50',n:'Ersekë',c:'move',lat:40.3378,lng:20.6789,d:'Miestelis ~1 000 m aukštyje Gramozo kalnų papėdėje. Trumpa kavos pertrauka prieš žvyrą.'},
-  {t:'10:30',n:'Melesin Distillery, Leskovikas',c:'food',lat:40.1527668,lng:20.5992915,pid:'ChIJW2qbC1pPWhMRuUbwEa80poY',d:'Distilerija ir viešbutis iš TIME „World’s Greatest Places 2024“ sąrašo. Kava, ekskursija, džino ir raki degustacija; butelis lauktuvėms.',tel:'+355 68 800 7771'},
-  {t:'12:30',n:'Benjos versmės ir Kadiut tiltas',c:'sight',lat:40.2443987,lng:20.4324621,pid:'ChIJZey2XhtaWhMR93l-W3vLqYU',d:'Nemokami ~23–32 °C baseinai po osmanų tiltu, už jų – Langaricos kanjonas. Posūkis prie Petran, asfaltas iki aikštelės (~200 ALL). Persirengti nėra kur: maudymukės po drabužiais, rankšluostis, vandens batai. Pavasarį upė gali baseinus atvėsinti ar užlieti.'},
-  {t:'14:15',n:'Restorant Antigonea, Përmet',c:'food',lat:40.2337592,lng:20.3530084,pid:'ChIJD1LBnuxXWhMRJfnH2aCDH_Q',d:'Molio puodų patiekalai, dolma, upėtakis; desertui Përmet gliko. Nemokamas parkavimas priešais.',tel:'+355 68 405 1373'},
-  {t:'15:15',n:'OMV Përmet',c:'fuel',lat:40.2356309,lng:20.3549189,pid:'ChIJ76TE7CZXWhMRo6DN_5ORcGM',d:'Papildymas. Žiūrėkite, kad skaitiklis pradėtų nuo nulio.'},
-  {t:'17:00',n:'Hotel Kalemi, Gjirokastra',c:'stay',lat:40.0745387,lng:20.1345535,pid:'ChIJWfC81sscWxMR07foACRmjgQ',d:'Osmanų namas su terasa. Parkavimas yra, bet privažiavimas status ir siauras – jei abejojate, paskambinkite. Alternatyvos: Guesthouse Mele, Hotel Bebej.',tel:'+355 68 223 4373',links:[{l:'Booking: Kalemi',u:bk('Hotel Kalemi Gjirokaster','2027-03-31','2027-04-01')},{l:'Guesthouse Mele',u:bk('Guesthouse Mele Gjirokaster','2027-03-31','2027-04-01')}]},
-  {t:'17:30',n:'Zekate namas',c:'sight',lat:40.0747731,lng:20.1325058,pid:'ChIJ8V7pC8kcWxMREyyYgfjHM4o',d:'Bokštinis osmanų namas, atidarytas 8–20, su terasa virš miesto. Gera vieta saulėlydžiui.'},
-  {t:'18:30',n:'Gjirokastros bazaras',c:'sight',lat:40.0744,lng:20.1393,d:'Penkių gatvelių sankryža (Qafa e Pazarit), akmeniniai stogai ir dirbtuvės.'},
-  {t:'19:30',n:'Odaja',c:'food',lat:40.0739344,lng:20.139118,pid:'ChIJOetTO8scWxMRSYAtZDm0HnU',d:'Tik grynieji. Qifqi (ryžių kamuoliukai), kotletai su jogurtu, balkonas virš gatvės. Alternatyva – Kujtimi (tavë kosi).',tel:'+355 69 880 7331'}
- ]},
-{id:7, date:'Kt 04-01', title:'Gjirokastros pilis → oro uostas', km:220, drive:'~3,5 h', night:'—',
- sum:'Valanda pilyje ir tiesus kelias SH4 iki oro uosto. Skrydis ~15:35.',
- notes:[{k:'warn',t:'<b>Griežta riba: išvykti 10:00.</b> Kelias trunka 3 h 15–3 h 30 be sustojimų, o bagažo priėmimas baigiasi likus 40 min. iki skrydžio. Jei vėluojate, Tepelenę praleiskite.'},
-        {k:'info',t:'Degalinių prie pat oro uosto (Alpet) venkite: daug atsiliepimų apie permokas. Baką pripildykite prie Vorë, 10 min iki terminalo.'}],
- route:[[20.1345,40.0745],[20.139,40.073],[20.08,40.17],[20.021,40.297],[19.98,40.36],[19.74,40.6],[19.56,40.72],[19.655,41.046],[19.67,41.08],[19.56,41.18],[19.5,41.32],[19.672,41.401],[19.72,41.414]],
- stops:[
-  {t:'8:00',n:'Pusryčiai ir išsiregistravimas',c:'stay',lat:40.0745387,lng:20.1345535,pid:'ChIJWfC81sscWxMR07foACRmjgQ',d:'Bagažą iš karto dėkite į automobilį.'},
-  {t:'9:00',n:'Gjirokastros pilis',c:'sight',lat:40.0727906,lng:20.1392199,pid:'ChIJkWVZ1DQDWxMRGEF1kU1oT9Q',d:'Atidaroma 9:00, 400 ALL. Artilerijos galerija, JAV lėktuvas, kalėjimas, vaizdas į Drino slėnį. Turėkite studento pažymėjimus – paklauskite nuolaidos.'},
-  {t:'10:00',n:'Išvykimas',c:'move',d:'Ne vėliau. Vairuotojai keičiasi ties Lushnjë.'},
-  {t:'10:30',n:'Tepelenos pilis',c:'sight',lat:40.2973324,lng:20.0210052,pid:'ChIJ59h-CBjmWhMRCR0ZXYVSOUw',d:'5–10 min: Vjosos ir Drino santaka nuo sienų. Tik jei laikotės grafiko.'},
-  {t:'12:15',n:'Kastrati, Lushnjë',c:'fuel',lat:41.0457485,lng:19.6549789,pid:'ChIJAVbca7cdUBMR77Vm_mwV-pw',d:'Pertrauka: WC, užkandis, parduotuvė. Priima korteles. Šioje atkarpoje daug greičio kontrolės.'},
-  {t:'13:20',n:'Kastrati, Vorë',c:'fuel',lat:41.40131,lng:19.6721192,pid:'ChIJb34BvwwsUBMRqRcsyKzoK8Q',d:'Paskutinis papildymas iki pilno (grąžinimas „full-to-full“). Pasilikite čekį.'},
-  {t:'13:40',n:'Automobilio grąžinimas, TIA',c:'move',lat:41.4135104,lng:19.7193723,pid:'ChIJf2DFEgctUBMR24ZSLfbBVFI',d:'Prie darbuotojo nufilmuokite kėbulą ir prietaisų skydelį (kuras, rida).'},
-  {t:'15:35',n:'Skrydis į Vilnių',c:'move',d:'W6 1938, Vilniuje ~19:10 vietos laiku. Laiką patikrinkite bilietuose.'}
+  {t:'7:00',n:'Išvykimas iš Shkodër',c:'move',lat:42.0626159,lng:19.5153935,d:'Iki Koman realiai 1,5–2 val.'},
+  {t:'9:00',n:'Komani uostas',c:'move',lat:42.1088038,lng:19.8264786,pid:'ChIJgeib_-cdUhMRYNgj_j0Z4KU',d:'Mokama aikštelė prie užtvankos, kavinė.'},
+  {t:'9:30',n:'Privatus laivas: Komani ir Šalos upė',c:'hike',lat:42.2029626,lng:19.8176954,pid:'ChIJpfwHneQRUhMRdAbplLuANDo',d:'9:30–13:30, ~170 € laivui. Šalos žiotyse – 30–40 min sustojimas. Kepurė ir pirštinės.'},
+  {t:'14:45',n:'Perla, Vau i Dejës',c:'food',lat:42.0227805,lng:19.6628384,pid:'ChIJPTw9ZLT_URMR3NUHwusupuc',d:'Vėlyvi pietūs terasoje virš ežero; aptarnauja neskubėdami.'},
+  {t:'16:00',n:'Kastrati, Lezhë',c:'fuel',lat:41.7535368,lng:19.642685,pid:'ChIJ12ZOKsPfURMRG0EyXzuahiY',d:'Papildymas pakeliui.'},
+  {t:'17:15',n:'Butas su parkavimu, Tirana',c:'stay',lat:TIRANA_APT.lat,lng:TIRANA_APT.lng,d:'Tarp Blloku ir Skanderbego aikštės. Vakare automobilio nereikės.',links:[{l:'Booking su parkavimu',u:bk('Tirana','2027-03-29','2027-03-30',1,'&nflt=hotelfacility%3D2')}]},
+  {t:'18:00',n:'Skanderbego aikštė',c:'sight',walk:1,lat:41.3281791,lng:19.8184475,pid:'ChIJObkn_A8xUBMRFY95E3CdgpE',d:'Et’hem Bey mečetė, laikrodžio bokštas, opera.'},
+  {t:'18:40',n:'Tiranos piramidė',c:'sight',walk:1,lat:41.3230699,lng:19.8214613,pid:'ChIJ13HJcBsxUBMRg0s9vq3gwuA',d:'Laiptais į viršų saulėlydžiui (~19:10).'},
+  {t:'20:00',n:'Oda',c:'food',walk:1,lat:41.3315272,lng:19.8246378,pid:'ChIJ4WtZ4BAxUBMRHZQho580f80',d:'Fërgesë, qofte, įdaryti pipirai. Rezervuokite.',tel:'+355 69 966 8881'}
  ]}
 ];
 
-const STAYS = [
+const D6A={id:6,date:'Tr 03-31',title:'SH75: Korčė → Leskovikas → Benja → Përmet → Gjirokastra',km:240,drive:'~5 h 05',night:'Gjirokastra',
+ sum:'Vaizdingiausias kelias plane: kalnų perėjos, Vjosos slėnis, karštosios versmės ir akmeninis miestas.',
+ notes:[{k:'warn',t:'<b>Lėčiausia atkarpa:</b> Ersekë–Leskovik, ~23 km žvyro, apie valandą. Aukščiausias taškas 1 169 m.'},{k:'warn',t:'<b>Planas B:</b> jei SH75 uždarytas – Korčė → Pogradecas → Elbasanas → Beratas (~3 val.), D7 Beratas → oro uostas.'},{k:'info',t:'Vairuotojai keičiasi Leskovike; degustuoja tas, kuris toliau nevairuoja.'}],
+ stops:[
+  {t:'7:45',n:'Kastrati, Korčė',c:'fuel',lat:40.6273301,lng:20.7703722,pid:'ChIJFUbJxEALWhMR4QoENiAfFBo',d:'Pilnas bakas: iki Përmet ~140 km kalnais. Priima korteles.'},
+  {t:'8:50',n:'Ersekë',c:'move',lat:40.3378,lng:20.6789,d:'Kava prieš žvyro atkarpą.'},
+  {t:'10:30',n:'Melesin Distillery, Leskovikas',c:'food',lat:40.1527668,lng:20.5992915,pid:'ChIJW2qbC1pPWhMRuUbwEa80poY',d:'TIME „World’s Greatest Places 2024“. Kava, ekskursija, džinas ir raki.',tel:'+355 68 800 7771'},
+  {t:'12:30',n:'Benjos versmės ir Kadiut tiltas',c:'sight',lat:40.2443987,lng:20.4324621,pid:'ChIJZey2XhtaWhMR93l-W3vLqYU',d:'Nemokami ~23–32 °C baseinai. Posūkis prie Petran, aikštelė ~200 ALL. Maudymukės po drabužiais, vandens batai.'},
+  {t:'14:15',n:'Restorant Antigonea, Përmet',c:'food',lat:40.2337592,lng:20.3530084,pid:'ChIJD1LBnuxXWhMRJfnH2aCDH_Q',d:'Molio puodų patiekalai, dolma; desertui gliko.',tel:'+355 68 405 1373'},
+  {t:'15:15',n:'OMV Përmet',c:'fuel',lat:40.2356309,lng:20.3549189,pid:'ChIJ76TE7CZXWhMRo6DN_5ORcGM',d:'Papildymas; žiūrėkite, kad skaitiklis pradėtų nuo nulio.'},
+  {t:'17:00',n:'Hotel Kalemi, Gjirokastra',c:'stay',lat:40.0745387,lng:20.1345535,pid:'ChIJWfC81sscWxMR07foACRmjgQ',d:'Osmanų namas su terasa; privažiavimas status ir siauras.',tel:'+355 68 223 4373',links:[{l:'Booking: Kalemi',u:bk('Hotel Kalemi Gjirokaster','2027-03-31','2027-04-01')},{l:'Guesthouse Mele',u:bk('Guesthouse Mele Gjirokaster','2027-03-31','2027-04-01')}]},
+  {t:'17:30',n:'Zekate namas',c:'sight',walk:1,lat:40.0747731,lng:20.1325058,pid:'ChIJ8V7pC8kcWxMREyyYgfjHM4o',d:'Bokštinis osmanų namas (8–20) su terasa saulėlydžiui.'},
+  {t:'19:30',n:'Odaja',c:'food',walk:1,lat:40.0739344,lng:20.139118,pid:'ChIJOetTO8scWxMRSYAtZDm0HnU',d:'Tik grynieji. Qifqi, kotletai su jogurtu. Alternatyva – Kujtimi.',tel:'+355 69 880 7331'}
+ ]};
+const D7A={id:7,date:'Kt 04-01',title:'Gjirokastros pilis → oro uostas',km:220,drive:'~3,5 h',night:'—',
+ sum:'Valanda pilyje ir tiesus kelias SH4 iki oro uosto. Skrydis ~15:35.',
+ notes:[{k:'warn',t:'<b>Griežta riba: išvykti 10:00.</b> Kelias trunka 3 h 15–3 h 30 be sustojimų, o bagažo priėmimas baigiasi likus 40 min. iki skrydžio.'},{k:'info',t:'Prie pat oro uosto esančių Alpet degalinių venkite – daug skundų dėl permokų. Pilkite prie Vorë.'}],
+ stops:[
+  {t:'8:00',n:'Pusryčiai ir išsiregistravimas',c:'stay',lat:40.0745387,lng:20.1345535,d:'Bagažą iš karto į automobilį.'},
+  {t:'9:00',n:'Gjirokastros pilis',c:'sight',walk:1,lat:40.0727906,lng:20.1392199,pid:'ChIJkWVZ1DQDWxMRGEF1kU1oT9Q',d:'Atidaroma 9:00, 400 ALL. Paklauskite studentų nuolaidos.'},
+  {t:'10:30',n:'Tepelenos pilis',c:'sight',lat:40.2973324,lng:20.0210052,pid:'ChIJ59h-CBjmWhMRCR0ZXYVSOUw',d:'5–10 min: Vjosos ir Drino santaka. Tik jei laikotės grafiko.'},
+  {t:'12:15',n:'Kastrati, Lushnjë',c:'fuel',lat:41.0457485,lng:19.6549789,pid:'ChIJAVbca7cdUBMR77Vm_mwV-pw',d:'Pertrauka: WC, užkandis. Priima korteles.'},
+  {t:'13:20',n:'Kastrati, Vorë',c:'fuel',lat:41.40131,lng:19.6721192,pid:'ChIJb34BvwwsUBMRqRcsyKzoK8Q',d:'Paskutinis papildymas iki pilno. Pasilikite čekį.'},
+  {t:'13:40',n:'Automobilio grąžinimas, TIA',c:'move',lat:41.4135104,lng:19.7193723,pid:'ChIJf2DFEgctUBMR24ZSLfbBVFI',d:'Nufilmuokite kėbulą ir prietaisų skydelį.'},
+  {t:'15:35',n:'Skrydis į Vilnių',c:'move',d:'W6 1938, Vilniuje ~19:10. Laiką tikrinkite bilietuose.'}
+ ]};
+
+const VAR={
+A:{name:'A · Pilnas žiedas',desc:'Ohridas dieną → Korčė → SH75 → Benja → Gjirokastra → oro uostas',km:1165,fit:'Didžiausia įvairovė; jei dvi ~5 val. dienos iš eilės neglumina.',border:true,
+ nights:[['5 · 03-30','Korčė','Hani i Pazarit; pigiau – Old Bazaar Rooms','~60–75 € / ~50 €',[['Hani i Pazarit',bk('Hani i Pazarit Korce','2027-03-30','2027-03-31')],['Old Bazaar Rooms',bk('Old Bazaar Rooms Korce','2027-03-30','2027-03-31')]]],['6 · 03-31','Gjirokastra','Hotel Kalemi; alternatyvos – Guesthouse Mele, Hotel Bebej','~45–65 € / ~40 €',[['Kalemi',bk('Hotel Kalemi Gjirokaster','2027-03-31','2027-04-01')],['Mele',bk('Guesthouse Mele Gjirokaster','2027-03-31','2027-04-01')]]]],
+ days:[
+ {id:5,date:'An 03-30',title:'Elbasanas → Ohridas → Šv. Naumas → Korčė',km:230,drive:'~4 h 45',night:'Korčė',
+  sum:'Aplink Ohrido ežerą: UNESCO senamiestis Šiaurės Makedonijoje, vienuolynas, šaltiniai ir vakaras Korčės turguje.',
+  notes:[{k:'warn',t:'Elbasano–Qafë Thanë kelias platinamas. Ryte patikrinkite Google Maps; jei uždaryta – variantas C.'}],
+  stops:[
+   {t:'7:30',n:'Išvykimas iš Tiranos',c:'move',lat:TIRANA_APT.lat,lng:TIRANA_APT.lng,d:'Greitkeliu per Krabos tunelį.'},
+   {t:'8:20',n:'Elbasano pilis',c:'sight',lat:41.1138634,lng:20.082813,pid:'ChIJFU4HZlJCUBMRXTuI9Nb3JSI',d:'Nemokama; kava ant sienų. 30 min.'},
+   {t:'10:15',n:'Qafë Thanë siena',c:'move',lat:41.0686,lng:20.6003,d:'Pasas, registracijos liudijimas, žalioji kortelė. Paprastai iki 30 min.',links:[{l:'Eilės gyvai',u:'https://nakordoni.eu/en/id/id_529/real_time/1'}]},
+   {t:'10:45',n:'Samuelio tvirtovė, Ohridas',c:'sight',lat:41.1151825,lng:20.7908451,pid:'ChIJU8UHdbzcUBMRXewjh6mxK2o',d:'Tvirtovė → Plaošnikas → antikinis teatras → Šv. Sofija. Parkuokitės prie senamiesčio ribos.'},
+   {t:'12:30',n:'Kaneo restoranas ir bažnyčia',c:'food',walk:1,lat:41.1110343,lng:20.790203,pid:'ChIJM_zVBrrcUBMRUUsu8_4V91Y',d:'Upėtakis ant vandens. Pigiau – burekas senamiestyje.'},
+   {t:'14:15',n:'Makpetrol Biljanini Izvori',c:'fuel',lat:41.106263,lng:20.8152797,pid:'ChIJEbIidVrbUBMRbfvi2mdx7xE',d:'Pilkite pilną: ~1,62 €/l, pigiausias kuras kelionėje.'},
+   {t:'14:45',n:'Šv. Naumo vienuolynas',c:'sight',lat:40.9140127,lng:20.7406778,pid:'ChIJ21jWl0u-UBMRTUkiaHgaf1I',d:'Freskos, povai, Juodojo Drino šaltiniai.'},
+   {t:'15:30',n:'Tushemisht siena',c:'move',lat:40.9075,lng:20.729,d:'Paprastai greita.'},
+   {t:'15:45',n:'Drilono parkas',c:'sight',lat:40.8995919,lng:20.7131695,pid:'ChIJGWYeMB6-UBMRo9d7LgBb9bs',d:'Gluosniai, šaltinių kanalai, gulbės.'},
+   {t:'16:30',n:'Pogradeco krantinė',c:'sight',lat:40.9019266,lng:20.6664681,pid:'ChIJP7zYeACVUBMRPTHdInwOhGs',d:'Trumpas pasivaikščiojimas.'},
+   {t:'17:45',n:'Hani i Pazarit, Korčė',c:'stay',lat:40.6181098,lng:20.7752483,pid:'ChIJGdes760LWhMRx8ES3Ihb0Qk',d:'Viešbutis karavansarajuje turgaus viduryje; gyva muzika.',tel:'+355 69 701 0055',links:[{l:'Booking',u:bk('Hani i Pazarit Korce','2027-03-30','2027-03-31')}]},
+   {t:'18:30',n:'Korčės senasis turgus',c:'sight',walk:1,lat:40.6176963,lng:20.7745021,pid:'ChIJZ6Xi-UIKWhMRvf-3GIQW1pg',d:'Gyviausia vakare.'},
+   {t:'20:00',n:'Taverna Vasili',c:'food',walk:1,lat:40.6228186,lng:20.7819905,pid:'ChIJr-5IYmsKWhMRXQ6ToM63gyk',d:'Lakror – paskambinkite dieną prieš. Citrinų sriuba, petulla.',tel:'+355 69 204 8583'},
+   {t:'21:30',n:'Birra Korça',c:'food',walk:1,lat:40.6112119,lng:20.7906588,pid:'ChIJq0Qs8DsKWhMR4o-5ClQNmGw',d:'Alaus sodas iki vidurnakčio.'}
+  ]},D6A,D7A]},
+B:{name:'B · Be sienos',desc:'Lin ir Pogradecas vietoj Ohrido → Korčė → SH75 → Gjirokastra → oro uostas',km:1135,fit:'Ramesnė D5, nereikia žaliosios kortelės (~50 € grupei mažiau).',border:false,
+ nights:null,
+ days:[
+ {id:5,date:'An 03-30',title:'Elbasanas → Lin → Pogradecas → Drilonas → Korčė',km:200,drive:'~3 h 50',night:'Korčė',
+  sum:'Ohrido ežeras iš Albanijos pusės: seniausias kaimas su mozaika, žuvies pietūs ant kranto, šaltiniai ir laisvas vakaras Korčėje.',
+  notes:[{k:'info',t:'Lin mozaika žiemą dažnai uždengta apsauga; bet vaizdas nuo kalvos į ežerą vertas pakilimo.'},{k:'info',t:'Laisvo laiko užtenka nuvažiuoti į Voskopojë (~20 km nuo Korčės) – Bizantijos bažnyčių kaimą.'}],
+  stops:[
+   {t:'8:00',n:'Išvykimas iš Tiranos',c:'move',lat:TIRANA_APT.lat,lng:TIRANA_APT.lng,d:'Greitkeliu per Krabos tunelį.'},
+   {t:'8:50',n:'Elbasano pilis',c:'sight',lat:41.1138634,lng:20.082813,pid:'ChIJFU4HZlJCUBMRXTuI9Nb3JSI',d:'Nemokama; kava ant sienų.'},
+   {t:'10:45',n:'Lin mozaika',c:'sight',lat:41.06586,lng:20.6448555,pid:'ChIJIeux3mvpUBMR3JOdv4g1ksQ',d:'VI a. bažnyčios mozaika ant kalvos; automobilį palikite aikštėje prie Hotel Leza ir lipkite pėsčiomis.'},
+   {t:'11:45',n:'Restorant Leza, Lin',c:'food',walk:1,lat:41.0665301,lng:20.6394787,pid:'ChIJR9kkHkLpUBMRj5931mEJ-k8',d:'Žuvis ant ežero kranto; priima ir eurus bei denarus.',tel:'+355 69 789 2698'},
+   {t:'13:30',n:'Drilono parkas',c:'sight',lat:40.8995919,lng:20.7131695,pid:'ChIJGWYeMB6-UBMRo9d7LgBb9bs',d:'Šaltiniai, gluosniai, gulbės.'},
+   {t:'14:30',n:'Pogradeco krantinė',c:'sight',lat:40.9019266,lng:20.6664681,pid:'ChIJP7zYeACVUBMRPTHdInwOhGs',d:'Kava prie ežero.'},
+   {t:'15:45',n:'Kastrati, Korčė',c:'fuel',lat:40.6273301,lng:20.7703722,pid:'ChIJFUbJxEALWhMR4QoENiAfFBo',d:'Pilnas bakas jau šiandien – rytoj išvažiuosite anksčiau.'},
+   {t:'16:15',n:'Voskopojë (neprivaloma)',c:'sight',lat:40.6325,lng:20.5886,d:'Kalnų kaimas su XVIII a. bažnyčiomis, ~25 min nuo Korčės.'},
+   {t:'18:30',n:'Hani i Pazarit, Korčė',c:'stay',lat:40.6181098,lng:20.7752483,pid:'ChIJGdes760LWhMRx8ES3Ihb0Qk',d:'Viešbutis turgaus viduryje.',tel:'+355 69 701 0055',links:[{l:'Booking',u:bk('Hani i Pazarit Korce','2027-03-30','2027-03-31')}]},
+   {t:'19:00',n:'Korčės senasis turgus',c:'sight',walk:1,lat:40.6176963,lng:20.7745021,pid:'ChIJZ6Xi-UIKWhMRvf-3GIQW1pg',d:'Vakarinis pasivaikščiojimas.'},
+   {t:'20:00',n:'Taverna Vasili',c:'food',walk:1,lat:40.6228186,lng:20.7819905,pid:'ChIJr-5IYmsKWhMRXQ6ToM63gyk',d:'Lakror – paskambinkite dieną prieš.',tel:'+355 69 204 8583'}
+  ]},D6A,D7A]},
+C:{name:'C · Saugus',desc:'Tirana → Gjirokastra · Benja ir Përmet → Beratas · Beratas → oro uostas',km:1080,fit:'Visi keliai asfaltuoti, paskutinė diena tik ~2 val. Neliks Ohrido, Korčės ir SH75.',border:false,
+ nights:[['5 · 03-30','Gjirokastra','Hotel Kalemi; alternatyvos – Guesthouse Mele, Hotel Bebej','~45–65 € / ~40 €',[['Kalemi',bk('Hotel Kalemi Gjirokaster','2027-03-30','2027-03-31')],['Mele',bk('Guesthouse Mele Gjirokaster','2027-03-30','2027-03-31')]]],['6 · 03-31','Beratas','Hotel Mangalemi (parkavimas 500 ALL)','~50–70 €',[['Mangalemi',bk('Hotel Mangalemi Berat','2027-03-31','2027-04-01')],['Paieška: Berat',bk('Berat','2027-03-31','2027-04-01')]]]],
+ days:[
+ {id:5,date:'An 03-30',title:'Tirana → Gjirokastra',km:230,drive:'~3 h 30',night:'Gjirokastra',
+  sum:'Tiesiai į pietus geriausiu šalies keliu; pilis ir akmeninis miestas dar tą pačią dieną.',
+  notes:[{k:'info',t:'Pilis antradienį dirba 9–16, todėl atvykite iki 13 val.'}],
+  stops:[
+   {t:'8:00',n:'Išvykimas iš Tiranos',c:'move',lat:TIRANA_APT.lat,lng:TIRANA_APT.lng,d:'Per Durrës aplinkkelį į SH4.'},
+   {t:'9:15',n:'Kastrati, Lushnjë',c:'fuel',lat:41.0457485,lng:19.6549789,pid:'ChIJAVbca7cdUBMR77Vm_mwV-pw',d:'Kava, WC, pilnas bakas.'},
+   {t:'11:00',n:'Tepelenos pilis',c:'sight',lat:40.2973324,lng:20.0210052,pid:'ChIJ59h-CBjmWhMRCR0ZXYVSOUw',d:'Vjosos ir Drino santaka nuo sienų.'},
+   {t:'12:00',n:'Hotel Kalemi, Gjirokastra',c:'stay',lat:40.0745387,lng:20.1345535,pid:'ChIJWfC81sscWxMR07foACRmjgQ',d:'Paliekate automobilį ir bagažą.',tel:'+355 68 223 4373',links:[{l:'Booking',u:bk('Hotel Kalemi Gjirokaster','2027-03-30','2027-03-31')}]},
+   {t:'12:30',n:'Gjirokastros pilis',c:'sight',walk:1,lat:40.0727906,lng:20.1392199,pid:'ChIJkWVZ1DQDWxMRGEF1kU1oT9Q',d:'400 ALL; skirkite 1,5 val.'},
+   {t:'14:15',n:'Odaja',c:'food',walk:1,lat:40.0739344,lng:20.139118,pid:'ChIJOetTO8scWxMRSYAtZDm0HnU',d:'Pietūs: qifqi, kotletai su jogurtu. Tik grynieji.',tel:'+355 69 880 7331'},
+   {t:'17:30',n:'Zekate namas',c:'sight',walk:1,lat:40.0747731,lng:20.1325058,pid:'ChIJ8V7pC8kcWxMREyyYgfjHM4o',d:'Osmanų namas ir terasa saulėlydžiui.'},
+   {t:'19:30',n:'Kujtimi',c:'food',walk:1,lat:40.074779,lng:20.1386403,pid:'ChIJGTDuasscWxMRFf5SaDns3Ic',d:'Šeimos restoranas >35 metų; tavë kosi, „traditional mix“. Priima korteles.',tel:'+355 68 353 7876'}
+  ]},
+ {id:6,date:'Tr 03-31',title:'Benja ir Përmet → Beratas',km:255,drive:'~4 h 45',night:'Beratas',
+  sum:'Rytas karštosiose versmėse, pietūs Përmet, vakaras „tūkstančio langų“ mieste.',
+  notes:[{k:'info',t:'Kelias į Beratą eina per Këlcyrę, Tepelenę ir Ballsh – visas asfaltuotas.'},{k:'warn',t:'Homemade Food Lili rezervuojamas per WhatsApp, dažnai prieš kelias savaites; savaitgaliais nedirba.'}],
+  stops:[
+   {t:'8:00',n:'Išvykimas iš Gjirokastros',c:'move',lat:40.0745387,lng:20.1345535,d:'Per Tepelenę ir Këlcyrės tarpeklį.'},
+   {t:'9:45',n:'Benjos versmės ir Kadiut tiltas',c:'sight',lat:40.2443987,lng:20.4324621,pid:'ChIJZey2XhtaWhMR93l-W3vLqYU',d:'Rytą žmonių mažiausiai. Maudymukės po drabužiais.'},
+   {t:'11:45',n:'Restorant Antigonea, Përmet',c:'food',lat:40.2337592,lng:20.3530084,pid:'ChIJD1LBnuxXWhMRJfnH2aCDH_Q',d:'Ankstyvi pietūs.',tel:'+355 68 405 1373'},
+   {t:'12:50',n:'OMV Përmet',c:'fuel',lat:40.2356309,lng:20.3549189,pid:'ChIJ76TE7CZXWhMRo6DN_5ORcGM',d:'Papildymas.'},
+   {t:'15:30',n:'Kastrati Otllak, prie Berato',c:'fuel',lat:40.7415114,lng:19.9355162,pid:'ChIJI4qu_MShWhMRw0jUYUoRTtk',d:'Priima korteles; pilnas bakas rytdienai.'},
+   {t:'15:45',n:'Hotel Mangalemi, Beratas',c:'stay',lat:40.7058408,lng:19.9510837,pid:'ChIJ32J2bVeZWhMRhxWSSQaCfpI',d:'Šeimos viešbutis Mangalem kvartale; parkavimas 500 ALL.',tel:'+355 68 232 3238',links:[{l:'Booking',u:bk('Hotel Mangalemi Berat','2027-03-31','2027-04-01')}]},
+   {t:'16:15',n:'Berato pilis',c:'sight',walk:1,lat:40.7105697,lng:19.9461372,pid:'ChIJX0IJywaiWhMRjW53bwnE_ls',d:'Gyvenamas kvartalas pilies sienose; status pakilimas akmenimis.'},
+   {t:'18:15',n:'Gorica tiltas',c:'sight',walk:1,lat:40.7032111,lng:19.9446481,pid:'ChIJU6S1pQiiWhMRbnqtP6OzfL8',d:'Geriausias vaizdas į „tūkstančio langų“ fasadus.'},
+   {t:'19:00',n:'Homemade Food Lili',c:'food',walk:1,lat:40.7048572,lng:19.9489722,pid:'ChIJ6Z7MhgeiWhMRW6YQT9rplVQ',d:'Vakarienė šeimininko kieme; darbo dienomis nuo 17:30.',tel:'+355 69 234 9362'}
+  ]},
+ {id:7,date:'Kt 04-01',title:'Beratas → oro uostas',km:125,drive:'~2 h',night:'—',
+  sum:'Ramus rytas Berate ir trumpas kelias į oro uostą.',
+  notes:[{k:'info',t:'Išvykti 11:00 – liks ~1,5 val. atsargos.'}],
+  stops:[
+   {t:'8:00',n:'Pusryčiai',c:'stay',lat:40.7058408,lng:19.9510837,d:'Hotel Mangalemi.'},
+   {t:'9:00',n:'Mangalem kvartalas ir upės krantinė',c:'sight',walk:1,lat:40.7032111,lng:19.9446481,d:'Pasivaikščiojimas ir kava.'},
+   {t:'12:45',n:'Kastrati, Vorë',c:'fuel',lat:41.40131,lng:19.6721192,pid:'ChIJb34BvwwsUBMRqRcsyKzoK8Q',d:'Paskutinis papildymas iki pilno.'},
+   {t:'13:05',n:'Automobilio grąžinimas, TIA',c:'move',lat:41.4135104,lng:19.7193723,pid:'ChIJf2DFEgctUBMR24ZSLfbBVFI',d:'Nufilmuokite kėbulą ir skydelį.'},
+   {t:'15:35',n:'Skrydis į Vilnių',c:'move',d:'W6 1938.'}
+  ]}]}
+};
+VAR.B.nights=VAR.A.nights;
+
+const BASE_NIGHTS=[
  ['1 · 03-26','Shkodër','Hotel Tradita: tradicinis namas, parkavimas, pusryčiai','~50–70 €',[['Paieška',bk('Hotel Tradita Shkoder','2027-03-26','2027-03-27')]]],
  ['2 · 03-27','Theth','Molla Guest House arba kiti svečių namai su vakariene ir pusryčiais','~30–40 € žmogui',[['Paieška: Theth',bk('Theth','2027-03-27','2027-03-28')]]],
  ['3 · 03-28','Shkodër','Hotel Tradita (bagažas liko ten)','~50–70 €',[['Paieška',bk('Hotel Tradita Shkoder','2027-03-28','2027-03-29')]]],
- ['4 · 03-29','Tirana','Butas keturiems su parkavimu, tarp Blloku ir Skanderbego aikštės','~60–90 € už butą',[['Paieška su parkavimu',bk('Tirana','2027-03-29','2027-03-30',1,'&nflt=hotelfacility%3D2')]]],
- ['5 · 03-30','Korčė','Hani i Pazarit; pigiau – Old Bazaar Rooms','~60–75 € / ~50 €',[['Hani i Pazarit',bk('Hani i Pazarit Korce','2027-03-30','2027-03-31')],['Old Bazaar Rooms',bk('Old Bazaar Rooms Korce','2027-03-30','2027-03-31')]]],
- ['6 · 03-31','Gjirokastra','Hotel Kalemi; alternatyvos – Guesthouse Mele, Hotel Bebej','~45–65 € / ~40 €',[['Kalemi',bk('Hotel Kalemi Gjirokaster','2027-03-31','2027-04-01')],['Mele',bk('Guesthouse Mele Gjirokaster','2027-03-31','2027-04-01')]]],
- ['Variantas C','Beratas','Jei D6 baigiate Berate, o ne Gjirokastroje','~40–60 €',[['Paieška: Berat',bk('Berat','2027-03-31','2027-04-01')]]]
+ ['4 · 03-29','Tirana','Butas keturiems su parkavimu','~60–90 € už butą',[['Paieška su parkavimu',bk('Tirana','2027-03-29','2027-03-30',1,'&nflt=hotelfacility%3D2')]]]
 ];
 
-const CHECKS = [
- ['Dabar (lapkritis–gruodis)',[
-  'Nupirkti Wizz Air bilietus Vilnius ⇄ Tirana (ten 03-26, atgal 04-01) ir pasitikrinti tikslius laikus',
-  'Užsakyti automobilį: pilnas draudimas be išskaitos, antras vairuotojas, žalioji kortelė su Šiaurės Makedonija',
-  'Raštu paklausti nuomos bendrovės: ar leidžiamas kelias į Theth ir kelias Vau i Dejës–Koman',
-  'Rezervuoti 6 nakvynes su nemokamu atšaukimu',
-  'Susitarti dėl privataus laivo Komani ežere 03-29 9:30 ir paklausti pervežimo iš Shkodër kainos'
- ]],
- ['Sausis–vasaris',[
-  'Rezervuoti Mrizi i Zanave vakarienę 03-26 ~18:45',
-  'Rezervuoti Arbri (Velykų vakarienė 03-28 20:00) ir Oda (03-29 20:00)',
-  'Kelionių draudimas visiems keturiems',
-  'eSIM arba sprendimas pirkti vietinę SIM oro uoste',
-  'Patvirtinti su Theth svečių namais, kad kovo pabaigoje dirba'
- ]],
- ['Savaitė prieš kelionę',[
-  'Theth orų prognozė ir kelio būklė (ARRSH, svečių namai)',
-  'SH75 ir Elbasano–Qafë Thanë kelio būklė',
-  'Atsisiųsti Albanijos ir Ohrido žemėlapius naudoti be interneto',
-  'Užsakyti lakror Taverna Vasili (skambutis dieną prieš)',
-  'Sudėti: žygio batai, kepurė ir pirštinės laivui, maudymukės ir vandens batai Benjai, studento pažymėjimai'
- ]],
- ['Kelionėje kasdien',[
-  'D2 7:00 – sprendimas dėl perėjos',
-  'D5 rytą – ar atviras kelias į Qafë Thanë; A, B ar C variantas',
-  'D6 rytą – paklausti Korčės viešbutyje apie SH75',
-  'D7 – išvykti iš Gjirokastros 10:00'
- ]]
+const CHECKS=[
+ ['Dabar (lapkritis–gruodis)',['Nupirkti Wizz Air bilietus Vilnius ⇄ Tirana ir pasitikrinti tikslius laikus','Išsiųsti laišką 2–3 nuomos bendrovėms (skirtukas „Automobilis“) ir rezervuoti tą, kuri raštu patvirtins debetinę kortelę, Theth ir Koman kelius','Rezervuoti 6 nakvynes su nemokamu atšaukimu (pagal variantą)','Susitarti dėl privataus laivo Komani ežere 03-29 9:30']],
+ ['Sausis–vasaris',['Rezervuoti Mrizi i Zanave (03-26), Arbri (03-28), Oda (03-29); variante C – Lili (03-31)','Kelionių draudimas visiems keturiems','eSIM arba sprendimas pirkti vietinę SIM','Patvirtinti su Theth svečių namais, kad kovo pabaigoje dirba','Grupės sprendimas: A, B ar C']],
+ ['Savaitė prieš',['Skirtukas „Orai“: perėjos prognozė','SH75 ir Elbasano–Qafë Thanë kelio būklė','Atsisiųsti Albanijos žemėlapį naudoti be interneto Google Maps programėlėje','Atidaryti šį puslapį su internetu, kad išsisaugotų naudoti be ryšio','Užsakyti lakror Taverna Vasili (dieną prieš)']],
+ ['Kelionėje kasdien',['D2 7:00 – sprendimas dėl perėjos','D4 vakarą – galutinis A, B ar C','D5 rytą – ar atviras kelias','D7 – išvykti laiku']]
 ];
+const PICKUP=['Nufilmuokite visą kėbulą, ratlankius, stiklą ir saloną; darbuotojo akivaizdoje pažymėkite visus įbrėžimus aktuose','Nufotografuokite kuro lygį ir ridą','Patikrinkite atsarginį ratą (ne „ant greito“ remonto rinkinį), domkratą ir padangų protektorių','Žalioji kortelė, kurioje nebraukta MK (variante A)','Draudžiamų kelių sąrašas sutartyje: SH21 į Theth ir Koman kelias turi būti leidžiami','Abu vairuotojai įrašyti į sutartį','Užstato suma ir kada jis grąžinamas – raštu','Grandinės bagažinėje (perėja 1 690 m)','Nuomos bendrovės 24/7 telefonas – įrašykite skirtuke „Kelionėje“'];
+const PHRASES=[['Përshëndetje','pėršėndetje','Sveiki'],['Faleminderit','faleminderit','Ačiū'],['Ju lutem','ju liutem','Prašau'],['Po / Jo','po / jo','Taip / Ne'],['Sa kushton?','sa kuštòn','Kiek kainuoja?'],['Llogarinë, ju lutem','llogarinė, ju liutem','Sąskaitą, prašau'],['Plot, ju lutem','plot, ju liutem','Pilną baką, prašau'],['Naftë / Benzinë','naftė / benzinė','Dyzelinas / benzinas'],['Ku është…?','ku ėštė','Kur yra…?'],['Flisni anglisht?','flisni anglišt','Ar kalbate angliškai?'],['Nuk kuptoj','nuk kuptoj','Nesuprantu'],['Ujë, kafe, birrë','ujė, kafe, birė','Vanduo, kava, alus'],['Shumë mirë!','šiumė mirė','Labai gerai!'],['Gëzuar!','gėzuar','Į sveikatą!'],['Mirupafshim','mirupafšim','Viso gero']];
+const PACK=[['Žygiams',['Batai su protektoriumi (Grunas, Mėlynoji akis)','Lengva striukė nuo lietaus','Kuprinė dienai ir gertuvė','Žibintuvėlis (Theth elektra gali dingti)']],['Laivui ir kalnams',['Kepurė ir pirštinės (Komani laive vėjuota)','Šiltas sluoksnis – perėjoje gali būti apie 0 °C','Saulės akiniai (sniegas atspindi)']],['Benjai',['Maudymukės (patogu vilkėti po drabužiais)','Rankšluostis','Vandens batai ar šlepetės','Maišelis šlapiems daiktams']],['Dokumentai ir pinigai',['Pasai ir vairuotojo pažymėjimai','Kelionių draudimas','Debetinė kortelė ir ~150 € grynaisiais atsargai','Studento pažymėjimai (nuolaidos pilyse)','Automobilinis telefono laikiklis ir krovimo laidas']]];
 
-/* ---------- map geometry (schematic) ---------- */
-const K=300, LON0=18.95, LAT0=42.78, CX=Math.cos(41*Math.PI/180);
-const P=(lon,lat)=>[(lon-LON0)*CX*K,(LAT0-lat)*K];
-const MW=(21.25-LON0)*CX*K, MH=(LAT0-39.5)*K;
-const COAST=[[19.37,41.85],[19.45,41.86],[19.59,41.81],[19.58,41.75],[19.59,41.63],[19.45,41.585],[19.52,41.47],[19.41,41.41],[19.44,41.31],[19.52,41.24],[19.44,41.15],[19.45,40.95],[19.36,40.80],[19.32,40.64],[19.39,40.51],[19.48,40.45],[19.47,40.32],[19.30,40.42],[19.38,40.30],[19.58,40.17],[19.63,40.14],[19.74,40.10],[19.79,40.06],[19.86,40.05],[19.92,39.99],[20.0,39.87],[20.0,39.77],[20.01,39.69]];
-const BORDER=[[19.37,41.85],[19.36,42.0],[19.37,42.10],[19.40,42.32],[19.47,42.37],[19.60,42.55],[19.66,42.62],[19.74,42.66],[19.83,42.47],[19.99,42.51],[20.07,42.56],[20.22,42.40],[20.36,42.33],[20.52,42.21],[20.60,42.0],[20.59,41.87],[20.52,41.72],[20.46,41.56],[20.56,41.40],[20.50,41.30],[20.60,41.09],[20.64,41.08],[20.72,40.91],[20.84,40.93],[20.98,40.86],[20.96,40.77],[21.04,40.67],[21.06,40.62],[20.98,40.50],[20.84,40.47],[20.79,40.43],[20.72,40.28],[20.67,40.10],[20.61,40.07],[20.47,40.06],[20.40,39.99],[20.31,39.92],[20.39,39.80],[20.30,39.73],[20.22,39.65],[20.01,39.69]];
-const SEA=[[18.95,42.15],[19.09,42.09],[19.21,41.92]].concat(COAST,[[20.10,39.62],[20.18,39.5],[18.95,39.5]]);
-const ALB=BORDER.concat(COAST.slice().reverse());
-const CORFU=[[19.64,39.75],[19.85,39.82],[19.95,39.78],[19.93,39.62],[19.86,39.5],[19.70,39.5],[19.62,39.66]];
-const LAKES=[
- [[19.05,42.30],[19.20,42.33],[19.36,42.30],[19.47,42.22],[19.50,42.08],[19.42,42.06],[19.33,42.14],[19.20,42.17],[19.08,42.22]],
- [[20.64,41.08],[20.72,41.17],[20.80,41.12],[20.80,40.98],[20.75,40.90],[20.69,40.90],[20.64,40.98]],
- [[20.93,40.98],[21.05,40.95],[21.07,40.82],[20.98,40.78],[20.92,40.86]]
-];
-const KOMAN=[[19.826,42.109],[19.85,42.17],[19.82,42.20],[19.93,42.24],[20.05,42.26]];
-const TOWNS=[['Tirana',19.818,41.328,8,4],['Shkodër',19.515,42.063,-8,-8,'end'],['Theth',19.782,42.389,8,-6],['Durrës',19.445,41.31,-8,4,'end'],['Elbasanas',20.083,41.114,0,16,'middle'],['Ohridas',20.79,41.115,8,-6],['Pogradecas',20.666,40.902,-8,4,'end'],['Korčė',20.775,40.618,8,4],['Beratas',19.946,40.71,8,4],['Përmet',20.353,40.234,-6,-8,'end'],['Gjirokastra',20.139,40.073,-8,12,'end'],['Vlorë',19.49,40.46,8,4],['Sarandë',20.0,39.875,8,4],['Fier',19.56,40.72,-8,4,'end'],['Leskovikas',20.599,40.153,8,12],['Koman',19.826,42.109,8,12],['Kruja',19.794,41.507,8,-4]];
-const LANDS=[['JUODKALNIJA',19.22,42.52],['KOSOVAS',20.72,42.5],['Š. MAKEDONIJA',20.92,41.55],['GRAIKIJA',20.88,39.98],['Adrijos jūra',19.14,41.1],['Jonijos jūra',19.42,39.86]];
+/* ================= state ================= */
+let variant=store.get('alb-variant','A'); if(!VAR[variant]) variant='A';
+let selDay=0, selStop=null, hidden=new Set();
+const days=()=>BASE.concat(VAR[variant].days);
+const dayById=id=>days().find(d=>d.id===id);
 
-const poly=a=>a.map(p=>P(p[0],p[1]).map(v=>v.toFixed(1)).join(',')).join(' ');
-const svg=document.getElementById('map'), box=document.getElementById('mapbox'), card=document.getElementById('card');
-let vb={x:0,y:0,w:MW,h:MH}, selDay=0, selStop=null, hidden=new Set();
-
-function shape(c,col,big){
-  const st=`fill="${col}" stroke="var(--surface)" stroke-width="1.6"`;
-  const s={
-   sight:`<circle r="6.5" ${st}/>`,
-   food:`<rect x="-6" y="-6" width="12" height="12" rx="2.5" ${st}/>`,
-   fuel:`<polygon points="0,-8.5 8.5,0 0,8.5 -8.5,0" ${st}/>`,
-   stay:`<polygon points="-7,7 -7,-1.5 0,-8.5 7,-1.5 7,7" ${st}/>`,
-   hike:`<polygon points="0,-8 7.5,6 -7.5,6" ${st}/>`,
-   move:`<circle r="4.5" fill="var(--surface)" stroke="${col}" stroke-width="2.4"/>`
-  }[c];
-  return (big?`<circle r="13" fill="none" stroke="var(--ink)" stroke-width="2"/>`:'')+s;
+/* ================= header ================= */
+function renderFacts(){
+  const v=VAR[variant], total=days().reduce((a,d)=>a+d.km,0);
+  $('#facts').innerHTML=[[`7 d. / 6 n.`,'Pn 03-26 – Kt 04-01'],[`~${total.toLocaleString('lt-LT')} km`,'iš viso keliais'],[v.border?'2 sienos':'Be sienų',v.border?'Ohridas dieną':'tik Albanija'],[budgetTotal(),'vienam žmogui su skrydžiu']].map(f=>`<div class="fact"><b>${f[0]}</b><span>${f[1]}</span></div>`).join('');
+  document.querySelectorAll('#varseg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===variant));
 }
-const icon=(c,col)=>`<svg viewBox="-10 -10 20 20" aria-hidden="true">${shape(c,col)}</svg>`;
-
-function buildMap(){
-  let h=`<rect x="-400" y="-400" width="${MW+800}" height="${MH+800}" fill="var(--land-other)"/>`;
-  h+=`<polygon points="${poly(SEA)}" fill="var(--water)"/>`;
-  h+=`<rect x="-400" y="${P(0,42.15)[1]}" width="400" height="${MH+400}" fill="var(--water)"/><rect x="-400" y="${MH}" width="${P(20.18,0)[0]+400}" height="400" fill="var(--water)"/>`;
-  h+=`<polygon points="${poly(CORFU)}" fill="var(--land-other)"/>`;
-  h+=`<polygon points="${poly(ALB)}" fill="var(--land)" stroke="var(--muted)" stroke-width="1" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
-  LAKES.forEach(l=>h+=`<polygon points="${poly(l)}" fill="var(--lake)"/>`);
-  h+=`<polyline points="${poly(KOMAN)}" fill="none" stroke="var(--lake)" stroke-width="4" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>`;
-  h+='<g id="routes">';
-  DAYS.forEach(d=>{
-    h+=`<polyline class="rt" data-day="${d.id}" points="${poly(d.route)}" fill="none" stroke="${C[d.id]}" stroke-width="3.2" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>`;
-    (d.foot||[]).forEach(f=>h+=`<polyline class="rt" data-day="${d.id}" points="${poly(f)}" fill="none" stroke="${C[d.id]}" stroke-width="2.4" stroke-dasharray="2 6" vector-effect="non-scaling-stroke" stroke-linecap="round"/>`);
-  });
-  h+='</g><g id="labels">';
-  LANDS.forEach(l=>{const p=P(l[1],l[2]);h+=`<g class="sc" data-x="${p[0]}" data-y="${p[1]}"><text text-anchor="middle" font-size="10" letter-spacing="1.2" fill="var(--muted)" opacity=".75" font-family="var(--body)">${l[0]}</text></g>`;});
-  TOWNS.forEach(t=>{const p=P(t[1],t[2]);h+=`<g class="sc" data-x="${p[0]}" data-y="${p[1]}"><circle r="1.8" fill="var(--muted)"/><text x="${t[3]}" y="${t[4]}" text-anchor="${t[5]||'start'}" font-size="11.5" font-weight="600" fill="var(--ink)" stroke="var(--land)" stroke-width="3" paint-order="stroke" font-family="var(--body)">${t[0]}</text></g>`;});
-  h+='</g><g id="markers">';
-  DAYS.forEach(d=>d.stops.forEach((s,i)=>{ if(s.lat==null) return; const p=P(s.lng,s.lat);
-    h+=`<g class="sc mk" data-x="${p[0]}" data-y="${p[1]}" data-day="${d.id}" data-i="${i}" data-cat="${s.c}" tabindex="0" role="button" aria-label="D${d.id} ${s.t} ${s.n}" style="cursor:pointer"><title>D${d.id} · ${s.t} · ${s.n}</title><g class="shp">${shape(s.c,C[d.id])}</g></g>`; }));
-  h+='</g>';
-  svg.innerHTML=h;
-}
-function apply(){
-  svg.setAttribute('viewBox',`${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
-  const s=vb.w/box.clientWidth;
-  svg.querySelectorAll('.sc').forEach(g=>g.setAttribute('transform',`translate(${g.dataset.x},${g.dataset.y}) scale(${s})`));
-}
-function fit(pts){
-  const asp=box.clientWidth/box.clientHeight;
-  let xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
-  let x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
-  let w=Math.max(x1-x0,26)*1.34, h=Math.max(y1-y0,26)*1.34;
-  if(w/h<asp) w=h*asp; else h=w/asp;
-  vb={x:(x0+x1)/2-w/2,y:(y0+y1)/2-h/2,w,h}; apply();
-}
-function fitSel(){
-  if(!selDay){ fit([[0,0],[MW,MH]].map(p=>p)); return; }
-  const d=DAYS[selDay-1]; let pts=d.route.map(p=>P(p[0],p[1]));
-  (d.foot||[]).forEach(f=>f.forEach(p=>pts.push(P(p[0],p[1]))));
-  fit(pts);
-}
-function zoom(f,cx,cy){
-  const nx=cx==null?vb.x+vb.w/2:cx, ny=cy==null?vb.y+vb.h/2:cy;
-  const w=Math.min(Math.max(vb.w*f,14),MW*2.4), k=w/vb.w;
-  vb={x:nx-(nx-vb.x)*k,y:ny-(ny-vb.y)*k,w,h:vb.h*k}; apply();
-}
-function refreshMarks(){
-  svg.querySelectorAll('.rt').forEach(r=>r.style.opacity=(!selDay||+r.dataset.day===selDay)?1:.16);
-  svg.querySelectorAll('.mk').forEach(m=>{
-    const on=!selDay||+m.dataset.day===selDay, d=DAYS[m.dataset.day-1], s=d.stops[m.dataset.i];
-    m.style.display=hidden.has(m.dataset.cat)?'none':'';
-    m.style.opacity=on?1:.2;
-    const big=selStop&&selStop.d===d.id&&selStop.i===+m.dataset.i;
-    m.querySelector('.shp').innerHTML=shape(s.c,C[d.id],big);
-    if(big) m.parentNode.appendChild(m);
-  });
-}
-
-/* ---------- links ---------- */
-const gm=s=>`https://www.google.com/maps/search/?api=1&query=${s.lat}%2C${s.lng}`+(s.pid?`&query_place_id=${s.pid}`:'');
-function gdir(d){
-  let pts=[]; d.stops.forEach(s=>{ if(s.lat==null||s.nav===false) return; const k=s.lat.toFixed(4)+','+s.lng.toFixed(4); if(pts[pts.length-1]!==k) pts.push(k); });
-  if(pts.length<2) return null;
-  let mid=pts.slice(1,-1);
-  if(mid.length>9){ const step=mid.length/9; mid=Array.from({length:9},(_,i)=>mid[Math.floor(i*step)]); }
-  return `https://www.google.com/maps/dir/?api=1&origin=${pts[0]}&destination=${pts[pts.length-1]}`+(mid.length?`&waypoints=${mid.join('%7C')}`:'')+'&travelmode=driving';
-}
-function stopLinks(s){
-  let a=[]; if(s.lat!=null) a.push(`<a href="${gm(s)}" target="_blank" rel="noopener">Google Maps</a>`);
-  (s.links||[]).forEach(l=>a.push(`<a href="${l.u}" target="_blank" rel="noopener">${l.l}</a>`));
-  if(s.tel) a.push(`<span>Tel. ${s.tel}</span>`);
-  return a.join('');
-}
-
-/* ---------- panel ---------- */
-const panel=document.getElementById('panel');
-function renderChips(){
-  let h=`<a class="chip" href="#marsrutas" aria-current="${!selDay}">Visos dienos</a>`;
-  DAYS.forEach(d=>h+=`<a class="chip" href="#d${d.id}" aria-current="${selDay===d.id}"><span class="dot" style="background:${C[d.id]}"></span>D${d.id} · ${d.date}</a>`);
-  document.getElementById('daychips').innerHTML=h;
-}
-function renderPanel(){
-  if(!selDay){
-    let h='<div class="overview">';
-    DAYS.forEach(d=>h+=`<a class="dcard" href="#d${d.id}" style="--c:${C[d.id]}"><div class="n">D${d.id}</div><div><div class="t">${d.title}</div><div class="s">${d.date} · ${d.sum}</div></div><div class="k"><b>~${d.km} km</b>${d.drive}</div></a>`);
-    h+='</div><div class="note good"><b>Kaip naudotis.</b> Pasirinkite dieną – žemėlapis priartės, o čia atsiras valandinis planas su degalinėmis, restoranais ir nuorodomis. Kiekviena diena turi mygtuką, atidarantį tikrą maršrutą „Google Maps“.</div>';
-    panel.innerHTML=h; return;
-  }
-  const d=DAYS[selDay-1], dir=gdir(d);
-  let h=`<div class="dayhead" style="--c:${C[d.id]}"><div class="eyebrow">D${d.id} · ${d.date}</div><h2>${d.title}</h2><p class="lede">${d.sum}</p>
-   <div class="row"><div><b>~${d.km} km</b>atstumas</div><div><b>${d.drive}</b>vairavimas</div><div><b>${d.night}</b>nakvynė</div></div>
-   ${dir?`<a class="btn" href="${dir}" target="_blank" rel="noopener">Atidaryti dienos maršrutą „Google Maps“</a>`:''}</div>`;
-  d.notes.forEach(n=>h+=`<div class="note ${n.k==='warn'?'warn':''}">${n.t}</div>`);
-  h+='<ol class="tl">';
-  d.stops.forEach((s,i)=>h+=`<li class="${s.lat!=null?'has':''}" data-i="${i}" id="s${d.id}-${i}"><div class="tm">${s.t}</div><div class="ic">${icon(s.c,C[d.id])}</div><div><div class="nm">${s.n}<span class="tag">${CAT[s.c].l}</span></div><div class="ds">${s.d}</div><div class="lk">${stopLinks(s)}</div></div></li>`);
-  h+='</ol>';
-  panel.innerHTML=h;
-  panel.querySelectorAll('.tl li.has').forEach(li=>li.addEventListener('click',e=>{ if(e.target.closest('a')) return; pick(d.id,+li.dataset.i,false); }));
-}
-function pick(day,i,scroll){
-  const d=DAYS[day-1], s=d.stops[i]; selStop={d:day,i};
-  card.hidden=false;
-  card.innerHTML=`<button class="x" type="button" aria-label="Uždaryti">×</button><h3>${s.n}</h3><div class="meta">D${day} · ${d.date} · ${s.t} · ${CAT[s.c].l}</div><div style="font-size:14px">${s.d}</div><div class="lk" style="display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:13px">${stopLinks(s)}${selDay!==day?`<a href="#d${day}">Rodyti D${day}</a>`:''}</div>`;
-  card.querySelector('.x').onclick=()=>{card.hidden=true;selStop=null;refreshMarks();panel.querySelectorAll('.tl li.sel').forEach(x=>x.classList.remove('sel'));};
-  refreshMarks();
-  panel.querySelectorAll('.tl li').forEach(x=>x.classList.toggle('sel',selDay===day&&+x.dataset.i===i));
-  if(scroll&&selDay===day){ const el=document.getElementById(`s${day}-${i}`); if(el) el.scrollIntoView({block:'nearest',behavior:'smooth'}); }
-}
-
-/* ---------- filters ---------- */
-function renderFilters(){
-  const f=document.getElementById('filters'); f.innerHTML='';
-  Object.keys(CAT).forEach(c=>{
-    const b=document.createElement('button'); b.type='button'; b.className='chip'; b.setAttribute('aria-pressed',!hidden.has(c));
-    b.innerHTML=icon(c,'var(--muted)')+CAT[c].l;
-    b.onclick=()=>{ hidden.has(c)?hidden.delete(c):hidden.add(c); b.setAttribute('aria-pressed',!hidden.has(c)); refreshMarks(); };
-    f.appendChild(b);
-  });
-}
-
-/* ---------- static tables ---------- */
-document.getElementById('staysbody').innerHTML=STAYS.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4].map(l=>`<a href="${l[1]}" target="_blank" rel="noopener">${l[0]}</a>`).join(' · ')}</td></tr>`).join('');
-document.getElementById('fuelbody').innerHTML=DAYS.map(d=>d.stops.filter(s=>s.c==='fuel').map(s=>`<tr><td>D${d.id} · ${s.t}</td><td><a href="${gm(s)}" target="_blank" rel="noopener">${s.n}</a></td><td>${s.d}</td></tr>`).join('')).join('');
-(function(){
-  let st={}; try{ st=JSON.parse(localStorage.getItem('alb-plan-checks')||'{}'); }catch(e){}
-  const root=document.getElementById('checks');
-  CHECKS.forEach((g,gi)=>{
-    const sec=document.createElement('div'); sec.innerHTML=`<h3 style="margin-bottom:6px">${g[0]}</h3>`;
-    const ul=document.createElement('ul'); ul.className='check';
-    g[1].forEach((t,i)=>{ const id=`c${gi}-${i}`; const li=document.createElement('li');
-      li.innerHTML=`<label for="${id}"><input type="checkbox" id="${id}" ${st[id]?'checked':''}><span>${t}</span></label>`;
-      li.querySelector('input').onchange=e=>{ st[id]=e.target.checked; try{ localStorage.setItem('alb-plan-checks',JSON.stringify(st)); }catch(err){} };
-      ul.appendChild(li); });
-    sec.appendChild(ul); root.appendChild(sec);
-  });
+(function countdown(){
+  const ms=new Date('2027-03-26T12:20:00+02:00')-new Date(), d=Math.ceil(ms/864e5);
+  $('#countdown').textContent=d>0?`iki išvykimo ${d} d.`:(d>-7?'kelionė vyksta':'kelionė baigta');
 })();
 
-/* ---------- map interaction ---------- */
-function toMap(e){ const r=svg.getBoundingClientRect(); return [vb.x+(e.clientX-r.left)/r.width*vb.w, vb.y+(e.clientY-r.top)/r.height*vb.h]; }
-let drag=null;
-svg.addEventListener('pointerdown',e=>{ drag={x:e.clientX,y:e.clientY,vx:vb.x,vy:vb.y,moved:false}; });
-window.addEventListener('pointermove',e=>{ if(!drag) return; const dx=e.clientX-drag.x, dy=e.clientY-drag.y; if(Math.abs(dx)+Math.abs(dy)>4){ drag.moved=true; svg.classList.add('drag'); }
-  if(drag.moved){ const k=vb.w/box.clientWidth; vb.x=drag.vx-dx*k; vb.y=drag.vy-dy*k; apply(); } });
-window.addEventListener('pointerup',()=>{ setTimeout(()=>{drag=null;},0); svg.classList.remove('drag'); });
-window.addEventListener('pointercancel',()=>{ drag=null; svg.classList.remove('drag'); });
-svg.addEventListener('click',e=>{ if(drag&&drag.moved) return; const m=e.target.closest('.mk'); if(m) pick(+m.dataset.day,+m.dataset.i,true); });
-svg.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ const m=e.target.closest('.mk'); if(m){ e.preventDefault(); pick(+m.dataset.day,+m.dataset.i,true); } } });
-svg.addEventListener('wheel',e=>{ if(!e.ctrlKey&&!e.metaKey) return; e.preventDefault(); const p=toMap(e); zoom(e.deltaY>0?1.2:1/1.2,p[0],p[1]); },{passive:false});
-document.getElementById('zin').onclick=()=>zoom(1/1.5);
-document.getElementById('zout').onclick=()=>zoom(1.5);
-document.getElementById('zfit').onclick=fitSel;
-window.addEventListener('resize',()=>{ if(document.getElementById('view-marsrutas').classList.contains('on')) fitSel(); });
-
-/* ---------- routing ---------- */
-const TABS=['marsrutas','patikra','nakvynes','biudzetas','pasiruosimas'];
-function go(){
-  let h=(location.hash||'').replace('#',''), tab='marsrutas', day=0;
-  const m=/^d([1-7])$/.exec(h); if(m){ day=+m[1]; } else if(TABS.includes(h)) tab=h;
-  TABS.forEach(t=>document.getElementById('view-'+t).classList.toggle('on',t===tab));
-  document.querySelectorAll('nav.tabs a').forEach(a=>{ a.dataset.tab===tab?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'); });
-  if(tab==='marsrutas'){
-    const changed=day!==selDay; selDay=day;
-    if(changed){ selStop=null; card.hidden=true; }
-    renderChips(); renderPanel(); refreshMarks(); fitSel();
-    if(selStop&&selStop.d===selDay) pick(selStop.d,selStop.i,false);
-  }
+/* ================= map ================= */
+let buildGen=0, map=null, routeLayer=null, markerLayer=null, markers={}, routes={};
+function shape(c,col,big){
+  const st=`fill="${col}" stroke="#fff" stroke-width="1.8"`;
+  const s={sight:`<circle r="6.5" ${st}/>`,food:`<rect x="-6" y="-6" width="12" height="12" rx="2.5" ${st}/>`,fuel:`<polygon points="0,-8.5 8.5,0 0,8.5 -8.5,0" ${st}/>`,stay:`<polygon points="-7,7 -7,-1.5 0,-8.5 7,-1.5 7,7" ${st}/>`,hike:`<polygon points="0,-8 7.5,6 -7.5,6" ${st}/>`,move:`<circle r="4.8" fill="#fff" stroke="${col}" stroke-width="2.6"/>`}[c];
+  return (big?`<circle r="13" fill="none" stroke="#15222b" stroke-width="2.4"/>`:'')+s;
 }
-buildMap(); renderFilters();
-window.addEventListener('hashchange',go);
+const icon=(c,col,big)=>`<svg viewBox="-14 -14 28 28" aria-hidden="true">${shape(c,col,big)}</svg>`;
+const gm=s=>`https://www.google.com/maps/search/?api=1&query=${s.lat}%2C${s.lng}`+(s.pid?`&query_place_id=${s.pid}`:'');
+function stopLinks(s){
+  const a=[]; if(s.lat!=null) a.push(`<a href="${gm(s)}" target="_blank" rel="noopener">Google Maps</a>`);
+  (s.links||[]).forEach(l=>a.push(`<a href="${l.u}" target="_blank" rel="noopener">${l.l}</a>`));
+  if(s.tel) a.push(`<a href="tel:${s.tel.replace(/\s/g,'')}">${s.tel}</a>`);
+  return a.join('');
+}
+function drivePts(d){ const out=[]; d.stops.forEach(s=>{ if(s.lat==null||s.walk||s.c==='hike') return; const p=[s.lat,s.lng]; const l=out[out.length-1]; if(!l||Math.abs(l[0]-p[0])+Math.abs(l[1]-p[1])>0.0008) out.push(p); }); return out; }
+function gdir(d){
+  const pts=drivePts(d).map(p=>p[0].toFixed(4)+','+p[1].toFixed(4)); if(pts.length<2) return null;
+  let mid=pts.slice(1,-1); if(mid.length>9){const st=mid.length/9; mid=Array.from({length:9},(_,i)=>mid[Math.floor(i*st)]);}
+  return `https://www.google.com/maps/dir/?api=1&origin=${pts[0]}&destination=${pts[pts.length-1]}`+(mid.length?`&waypoints=${mid.join('%7C')}`:'')+'&travelmode=driving';
+}
+function initMap(){
+  if(typeof L==='undefined'){ $('#map').innerHTML='<div class="maperr">Žemėlapis nepasikrovė – nėra interneto. Dienų planas žemiau veikia.</div>'; return; }
+  map=L.map('map',{zoomControl:true,scrollWheelZoom:true}).setView([41.3,20.0],7);
+  const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'});
+  const topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,subdomains:'abc',attribution:'© OpenStreetMap, SRTM | © <a href="https://opentopomap.org">OpenTopoMap</a>'});
+  osm.addTo(map);
+  L.control.layers({'Gatvės':osm,'Reljefas':topo},null,{position:'topright'}).addTo(map);
+  L.control.scale({imperial:false}).addTo(map);
+  const Loc=L.Control.extend({onAdd(){const b=L.DomUtil.create('div','leaflet-bar');b.innerHTML='<a href="#" role="button" title="Kur aš esu" aria-label="Kur aš esu" style="font-size:16px;line-height:30px;text-align:center">◎</a>';L.DomEvent.on(b,'click',e=>{L.DomEvent.preventDefault(e);map.locate({setView:true,maxZoom:14});});return b;}});
+  map.addControl(new Loc({position:'topleft'}));
+  let me=null; map.on('locationfound',e=>{ if(me) map.removeLayer(me); me=L.circleMarker(e.latlng,{radius:8,color:'#fff',weight:3,fillColor:'#1f6feb',fillOpacity:1}).addTo(map).bindPopup('Jūs čia'); });
+  map.on('locationerror',()=>status('#mapnote','Nepavyko nustatyti vietos – leiskite naršyklei ją naudoti.'));
+  routeLayer=L.layerGroup().addTo(map); markerLayer=L.layerGroup().addTo(map);
+}
+function buildMapLayers(){
+  if(!map) return;
+  routeLayer.clearLayers(); markerLayer.clearLayers(); markers={}; routes={};
+  days().forEach(d=>{
+    const col=C[d.id], pts=drivePts(d);
+    routes[d.id]={line:L.polyline(pts,{color:col,weight:4,opacity:.9,dashArray:'6 8'}).addTo(routeLayer),foot:[]};
+    let last=null;
+    d.stops.forEach((s,i)=>{
+      if(s.lat==null) return;
+      if(s.c==='hike'&&last) routes[d.id].foot.push(L.polyline([last,[s.lat,s.lng]],{color:col,weight:3,dashArray:'2 7',opacity:.9}).addTo(routeLayer));
+      if(!s.walk&&s.c!=='hike') last=[s.lat,s.lng];
+      const m=L.marker([s.lat,s.lng],{icon:L.divIcon({className:'mk',html:icon(s.c,col),iconSize:[22,22],iconAnchor:[11,11]}),title:`D${d.id} ${s.t} ${s.n}`,keyboard:true});
+      m.bindPopup(`<h3>${esc(s.n)}</h3><div class="meta">D${d.id} · ${d.date} · ${s.t} · ${CAT[s.c]}</div><div>${s.d}</div><div class="lk">${stopLinks(s)}</div>`,{maxWidth:280});
+      m.on('click',()=>pick(d.id,i,true,false));
+      m._cat=s.c; m._day=d.id; markers[`${d.id}-${i}`]=m; m.addTo(markerLayer);
+    });
+  });
+  refreshMarks(); fitSel();
+  const ds=days(), gen=++buildGen;
+  (async()=>{ for(const d of ds){ if(gen!==buildGen) return; await loadRoute(d); } })();
+}
+function refreshMarks(){
+  if(!map) return;
+  Object.entries(markers).forEach(([k,m])=>{
+    const on=!selDay||m._day===selDay, isSel=selStop&&k===`${selStop.d}-${selStop.i}`;
+    if(hidden.has(m._cat)){ if(markerLayer.hasLayer(m)) markerLayer.removeLayer(m); } else if(!markerLayer.hasLayer(m)) markerLayer.addLayer(m);
+    m.setOpacity(on?1:.25); m.setZIndexOffset(isSel?1000:on?100:0);
+    const d=dayById(m._day), s=d.stops[+k.split('-')[1]];
+    m.setIcon(L.divIcon({className:'mk',html:icon(s.c,C[m._day],isSel),iconSize:[22,22],iconAnchor:[11,11]}));
+  });
+  Object.entries(routes).forEach(([id,r])=>{ const on=!selDay||+id===selDay; r.line.setStyle({opacity:on?.92:.18,weight:on&&selDay?5:4}); r.foot.forEach(f=>f.setStyle({opacity:on?.9:.15})); if(on) r.line.bringToFront(); });
+}
+function fitSel(){
+  if(!map) return;
+  const ids=selDay?[selDay]:days().map(d=>d.id); let b=null;
+  ids.forEach(id=>{ const r=routes[id]; if(!r) return; const lb=r.line.getBounds(); if(lb.isValid()) b=b?b.extend(lb):L.latLngBounds(lb.getSouthWest(),lb.getNorthEast()); r.foot.forEach(f=>b&&b.extend(f.getBounds())); });
+  if(b) map.fitBounds(b,{padding:[24,24]});
+}
+
+/* routing via OSRM, cached */
+const RKEY='alb-route-v1:';
+async function loadRoute(d){
+  const pts=drivePts(d); if(pts.length<2) return;
+  const sig=pts.map(p=>p[1].toFixed(4)+','+p[0].toFixed(4)).join(';');
+  let data=store.get(RKEY+sig,null);
+  if(!data){
+    try{
+      const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${sig}?overview=full&geometries=geojson`);
+      const j=await r.json(); if(j.code!=='Ok') throw 0;
+      let c=j.routes[0].geometry.coordinates; const step=Math.max(1,Math.ceil(c.length/700)); c=c.filter((_,i)=>i%step===0||i===c.length-1);
+      data={c:c.map(p=>[+p[1].toFixed(5),+p[0].toFixed(5)]),km:j.routes[0].distance/1000,h:j.routes[0].duration/3600};
+      store.set(RKEY+sig,data);
+    }catch(e){ return; }
+  }
+  d._osrm=data;
+  const r=routes[d.id]; if(r&&dayById(d.id)===d){ r.line.setLatLngs(data.c); r.line.setStyle({dashArray:null}); refreshMarks(); if(selDay===d.id) fitSel(); }
+  if(selDay===d.id) renderOsrm(d);
+}
+function renderOsrm(d){
+  const el=$('#osrm'); if(!el||!d._osrm) return;
+  const h=Math.floor(d._osrm.h), m=Math.round((d._osrm.h-h)*60);
+  el.innerHTML=`<b>${Math.round(d._osrm.km)} km · ${h} h ${m} min</b>OSRM be sustojimų`;
+  loadElev(d);
+}
+/* elevation profile via Open-Meteo */
+async function loadElev(d){
+  const box=$('#elev'); if(!box||!d._osrm) return;
+  const c=d._osrm.c, n=Math.min(100,c.length), idx=Array.from({length:n},(_,i)=>Math.round(i*(c.length-1)/(n-1)));
+  const sample=idx.map(i=>c[i]); const key='alb-elev-v1:'+d.id+':'+variant+':'+c.length;
+  let el=store.get(key,null);
+  if(!el){ try{ const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${sample.map(p=>p[0]).join(',')}&longitude=${sample.map(p=>p[1]).join(',')}`); el=(await r.json()).elevation; if(!el) throw 0; store.set(key,el);}catch(e){ box.innerHTML=''; return; } }
+  let dist=[0]; for(let i=1;i<sample.length;i++){ const a=sample[i-1],b=sample[i]; const dx=(b[1]-a[1])*Math.cos(a[0]*Math.PI/180)*111.32, dy=(b[0]-a[0])*110.57; dist.push(dist[i-1]+Math.hypot(dx,dy)); }
+  const scale=d._osrm.km/(dist[dist.length-1]||1); dist=dist.map(x=>x*scale);
+  const W=600,H=96,P=4, maxE=Math.max(...el), minE=Math.min(0,...el), X=x=>P+x/dist[dist.length-1]*(W-2*P), Y=y=>H-14-(y-minE)/(maxE-minE||1)*(H-30);
+  const line=el.map((e,i)=>`${X(dist[i]).toFixed(1)},${Y(e).toFixed(1)}`).join(' ');
+  const mi=el.indexOf(maxE);
+  box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Aukščio profilis, aukščiausias taškas ${Math.round(maxE)} m">
+   <line x1="${P}" x2="${W-P}" y1="${Y(minE)}" y2="${Y(minE)}" stroke="var(--line)"/>
+   <polygon points="${X(0)},${Y(minE)} ${line} ${X(dist[dist.length-1])},${Y(minE)}" fill="${C[d.id]}" opacity=".18"/>
+   <polyline points="${line}" fill="none" stroke="${C[d.id]}" stroke-width="2" vector-effect="non-scaling-stroke"/>
+   <circle cx="${X(dist[mi])}" cy="${Y(maxE)}" r="3.5" fill="${C[d.id]}"/></svg>
+   <div class="cap">Aukščio profilis: aukščiausias taškas <b>${Math.round(maxE)} m</b> (~${Math.round(dist[mi])} km nuo dienos pradžios)</div>`;
+}
+
+/* ================= panel ================= */
+function renderChips(){
+  let h=`<a class="chip" href="#marsrutas" aria-current="${!selDay}">Visos dienos</a>`;
+  days().forEach(d=>h+=`<a class="chip" href="#d${d.id}" aria-current="${selDay===d.id}"><span class="dot" style="background:${C[d.id]}"></span>D${d.id} · ${d.date}</a>`);
+  $('#daychips').innerHTML=h;
+}
+function renderPanel(){
+  const panel=$('#panel');
+  if(!selDay){
+    let h='<div class="overview">';
+    days().forEach(d=>h+=`<a class="dcard" href="#d${d.id}" style="--c:${C[d.id]}"><div class="n">D${d.id}</div><div><div class="t">${d.title}</div><div class="s">${d.date} · ${d.sum}</div></div><div class="k"><b>~${d.km} km</b>${d.drive}</div></a>`);
+    h+=`</div><div class="note good"><b>Kaip naudotis.</b> Pasirinkite dieną – žemėlapis priartės, atsiras valandinis planas, aukščio profilis ir mygtukas maršrutui „Google Maps“. Viršuje pasirinkite variantą A, B arba C.</div>`;
+    panel.innerHTML=h; return;
+  }
+  const d=dayById(selDay), dir=gdir(d);
+  let h=`<div class="dayhead" style="--c:${C[d.id]}"><div class="eyebrow">D${d.id} · ${d.date}${d.id>=5?' · variantas '+variant:''}</div><h2>${d.title}</h2><p class="lede">${d.sum}</p>
+   <div class="row"><div><b>~${d.km} km</b>atstumas</div><div><b>${d.drive}</b>vairavimas</div><div id="osrm"></div><div><b>${d.night}</b>nakvynė</div></div>
+   <div class="elev" id="elev"></div>
+   <div class="btnrow">${dir?`<a class="btn" href="${dir}" target="_blank" rel="noopener">Dienos maršrutas „Google Maps“</a>`:''}${d.id<7?`<a class="btn2" href="#d${d.id+1}">Kita diena →</a>`:''}</div></div>`;
+  d.notes.forEach(n=>h+=`<div class="note ${n.k==='warn'?'warn':''}">${n.t}</div>`);
+  h+='<ol class="tl">';
+  d.stops.forEach((s,i)=>h+=`<li class="${s.lat!=null?'has':''}" data-i="${i}" id="s${d.id}-${i}"><div class="tm">${s.t}</div><div class="ic">${icon(s.c,C[d.id])}</div><div><div class="nm">${s.n}<span class="tag">${CAT[s.c]}${s.walk?' · pėsčiomis':''}</span></div><div class="ds">${s.d}</div><div class="lk">${stopLinks(s)}</div></div></li>`);
+  h+='</ol>';
+  panel.innerHTML=h;
+  panel.querySelectorAll('.tl li.has').forEach(li=>li.addEventListener('click',e=>{ if(e.target.closest('a')) return; pick(d.id,+li.dataset.i,false,true); }));
+  if(d._osrm) renderOsrm(d);
+}
+function pick(day,i,fromMap,fly){
+  selStop={d:day,i}; refreshMarks();
+  document.querySelectorAll('.tl li').forEach(x=>x.classList.toggle('sel',selDay===day&&+x.dataset.i===i));
+  const m=markers[`${day}-${i}`];
+  if(m&&fly){ map.flyTo(m.getLatLng(),Math.max(map.getZoom(),13),{duration:.6}); setTimeout(()=>m.openPopup(),650); if(innerWidth<900) $('#map').scrollIntoView({behavior:'smooth',block:'start'}); }
+  if(fromMap&&selDay===day){ const el=$(`#s${day}-${i}`); if(el) el.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+}
+function renderFilters(){
+  const f=$('#filters'); f.innerHTML='';
+  Object.keys(CAT).forEach(c=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.setAttribute('aria-pressed',!hidden.has(c)); b.innerHTML=icon(c,'#586973')+CAT[c];
+    b.onclick=()=>{ hidden.has(c)?hidden.delete(c):hidden.add(c); b.setAttribute('aria-pressed',!hidden.has(c)); refreshMarks(); }; f.appendChild(b); });
+}
+
+/* ================= tables ================= */
+function budgetRows(){
+  const v=VAR[variant], km=days().reduce((a,d)=>a+d.km,0), fuel=km*5.5/100*2.0/4;
+  return [['Skrydžiai Vilnius ⇄ Tirana','Wizz Air, tiesioginis, mažas bagažas',60,150],['Automobilio nuoma','7 paros, kompaktiškas visureigis su automatu, pilnas draudimas (žr. „Automobilis“)',65,105],
+   v.border?['Žalioji kortelė (Š. Makedonija)','~50 € grupei',12,13]:['Žalioji kortelė','Nereikia šiame variante',0,0],
+   ['Kuras',`~${km} km × 5,5 l/100 km × ~2,0 €/l ÷ 4 (dyzelinas; benzinu ~+6 €)`,Math.round(fuel),Math.round(fuel*1.15)],
+   ['Kelių mokesčiai, parkavimas','Thumanë–Kashar, miestai, Benja',8,12],['Komani privatus laivas','170 € laivui',43,43],
+   ['Nakvynės, 6 naktys','Mišrus variantas, dalis su pusryčiais',130,200],['Maistas','25–35 € per dieną × 7',175,245],['Bilietai','Pilys, muziejai, bokštas',15,20],['Ryšys','eSIM arba vietinė SIM',5,10]];
+}
+function budgetTotal(){ const r=budgetRows(); return `~${r.reduce((a,x)=>a+x[2],0)}–${r.reduce((a,x)=>a+x[3],0)} €`; }
+function renderTables(){
+  const r=budgetRows();
+  $('#budgetbody').innerHTML=r.map(x=>`<tr><td>${x[0]}</td><td>${x[1]}</td><td class="num">${x[2]===x[3]?x[2]:x[2]+'–'+x[3]}</td></tr>`).join('')+`<tr><td><b>Iš viso (variantas ${variant})</b></td><td></td><td class="num"><b>${budgetTotal()}</b></td></tr>`;
+  const nights=BASE_NIGHTS.concat(VAR[variant].nights);
+  $('#staysbody').innerHTML=nights.map(n=>`<tr><td>${n[0]}</td><td>${n[1]}</td><td>${n[2]}</td><td>${n[3]}</td><td>${n[4].map(l=>`<a href="${l[1]}" target="_blank" rel="noopener">${l[0]}</a>`).join(' · ')}</td></tr>`).join('');
+  $('#fuelbody').innerHTML=days().map(d=>d.stops.filter(s=>s.c==='fuel').map(s=>`<tr><td>D${d.id} · ${s.t}</td><td><a href="${gm(s)}" target="_blank" rel="noopener">${s.n}</a></td><td>${s.d}</td></tr>`).join('')).join('');
+  $('#vartable').innerHTML=Object.entries(VAR).map(([k,v])=>`<tr${k===variant?' class="hl"':''}><td><b>${v.name}</b></td><td>${v.desc}</td><td class="num">~${v.km}</td><td>${v.fit}</td></tr>`).join('');
+}
+function renderChecks(){
+  const st=store.get('alb-checks',{});
+  const mk=(id,t)=>`<li><label for="${id}"><input type="checkbox" id="${id}" ${st[id]?'checked':''}><span>${t}</span></label></li>`;
+  $('#checks').innerHTML=CHECKS.map((g,gi)=>`<div><h3 style="margin-bottom:6px">${g[0]}</h3><ul class="check">${g[1].map((t,i)=>mk(`c${gi}-${i}`,t)).join('')}</ul></div>`).join('');
+  $('#pickupcheck').innerHTML=PICKUP.map((t,i)=>mk(`p${i}`,t)).join('');
+  $('#packing').innerHTML=PACK.map((g,gi)=>`<div class="box"><h3>${g[0]}</h3><ul class="check">${g[1].map((t,i)=>mk(`k${gi}-${i}`,t)).join('')}</ul></div>`).join('');
+  document.querySelectorAll('.check input').forEach(inp=>inp.addEventListener('change',()=>{ st[inp.id]=inp.checked; store.set('alb-checks',st); }));
+}
+$('#phrases').innerHTML=PHRASES.map(p=>`<tr><td>${p[0]}</td><td>${p[1]}</td><td>${p[2]}</td></tr>`).join('');
+
+/* ================= weather ================= */
+const WX=[['Shkodër',42.068,19.512,20],['Qafa e Thorës (perėja)',42.3899,19.7252,1690],['Theth',42.396,19.775,760],['Tirana',41.328,19.818,110],['Ohridas',41.117,20.802,700],['Korčė',40.618,20.781,870],['Ersekë (SH75)',40.338,20.679,1000],['Gjirokastra',40.075,20.139,300],['Beratas',40.705,19.952,60]];
+let wxMode='trip';
+async function loadWx(){
+  const st=$('#wxstatus'), tbl=$('#wxtable'); st.textContent='Kraunama…';
+  const trip=new Date('2027-03-26T00:00:00'), daysTo=(trip-new Date())/864e5;
+  const q=`latitude=${WX.map(w=>w[1]).join(',')}&longitude=${WX.map(w=>w[2]).join(',')}&elevation=${WX.map(w=>w[3]).join(',')}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum&timezone=Europe%2FTirane`;
+  let url, label;
+  if(wxMode==='now'){ url=`https://api.open-meteo.com/v1/forecast?${q}&forecast_days=7`; label='Prognozė artimiausioms 7 dienoms.'; }
+  else if(daysTo<=15){ url=`https://api.open-meteo.com/v1/forecast?${q}&start_date=2027-03-26&end_date=2027-04-01`; label='Prognozė kelionės datoms.'; }
+  else { url=`https://archive-api.open-meteo.com/v1/archive?${q}&start_date=2026-03-26&end_date=2026-04-01`; label=`Prognozės dar nėra (iki kelionės ${Math.ceil(daysTo)} d.). Rodomi 2026 m. tų pačių datų faktiniai orai – kaip orientyras.`; }
+  const key='alb-wx:'+url; let data=null;
+  try{ const r=await fetch(url); data=await r.json(); if(!Array.isArray(data)) data=[data]; if(!data[0].daily) throw 0; store.set(key,{t:Date.now(),data}); }
+  catch(e){ const c=store.get(key,null); if(c){ data=c.data; label+=` Rodomi išsaugoti duomenys (${new Date(c.t).toLocaleString('lt-LT')}).`; } else { st.textContent='Orų duomenų gauti nepavyko – patikrinkite ryšį.'; tbl.innerHTML=''; return; } }
+  st.textContent=label;
+  const dates=data[0].daily.time, fmt=s=>s.slice(5).replace('-','-');
+  tbl.innerHTML=`<thead><tr><th>Vieta</th>${dates.map(t=>`<th>${fmt(t)}</th>`).join('')}</tr></thead><tbody>`+data.map((loc,li)=>{ const d=loc.daily;
+    return `<tr><td><b>${WX[li][0]}</b><div class="p">${WX[li][3]} m</div></td>`+dates.map((_,i)=>{ const sn=d.snowfall_sum[i]||0, pr=d.precipitation_sum[i]||0;
+      return `<td class="${sn>0.5?'snow':''}"><div class="t">${Math.round(d.temperature_2m_max[i])}° / ${Math.round(d.temperature_2m_min[i])}°</div><div class="p">${pr>0.2?pr.toFixed(1)+' mm':'sausa'}${sn>0.5?' · ❄ '+sn.toFixed(0)+' cm':''}</div></td>`;}).join('')+'</tr>'; }).join('')+'</tbody>';
+}
+let wxLoaded=false;
+
+/* ================= currency ================= */
+function cx(){ const v=parseFloat($('#cxin').value)||0, cur=$('#cxcur').value, eur=v/RATE[cur];
+  $('#cxout').innerHTML=Object.keys(RATE).filter(k=>k!==cur).map(k=>`<div><b>${(eur*RATE[k]).toLocaleString('lt-LT',{maximumFractionDigits:k==='EUR'?2:0})}</b> ${k}</div>`).join(''); }
+$('#cxin').addEventListener('input',cx); $('#cxcur').addEventListener('change',cx); cx();
+$('#mynums').value=store.get('alb-nums',''); $('#mynums').addEventListener('input',e=>store.set('alb-nums',e.target.value));
+
+/* ================= expenses ================= */
+let EX=store.get('alb-ex',{people:['Rokas','Draugas 2','Draugas 3','Draugas 4'],items:[]});
+const saveEx=()=>store.set('alb-ex',EX);
+function renderEx(){
+  $('#people').innerHTML=EX.people.map((p,i)=>`<label for="pp${i}">Žmogus ${i+1}<input type="text" id="pp${i}" value="${esc(p)}" style="width:140px"></label>`).join('');
+  EX.people.forEach((_,i)=>$('#pp'+i).addEventListener('change',e=>{EX.people[i]=e.target.value||('Žmogus '+(i+1));saveEx();renderEx();}));
+  $('#exwho').innerHTML=EX.people.map((p,i)=>`<option value="${i}">${esc(p)}</option>`).join('');
+  const n=EX.people.length, bal=Array(n).fill(0); let tot=0;
+  EX.items.forEach(it=>{ const e=it.amt/RATE[it.cur]; tot+=e; bal[it.who]+=e; for(let k=0;k<n;k++) bal[k]-=e/n; });
+  $('#balances').innerHTML=`<div class="src">Iš viso išleista: <b>${tot.toFixed(2)} €</b> · po ${(tot/n).toFixed(2)} € žmogui</div>`+EX.people.map((p,i)=>`<div>${esc(p)}: <b style="color:${bal[i]>=0?'var(--good)':'var(--crit)'}">${bal[i]>=0?'+':''}${bal[i].toFixed(2)} €</b></div>`).join('');
+  const deb=bal.map((b,i)=>[i,b]).filter(x=>x[1]<-.01).sort((a,b)=>a[1]-b[1]), cre=bal.map((b,i)=>[i,b]).filter(x=>x[1]>.01).sort((a,b)=>b[1]-a[1]), tr=[];
+  let a=0,b=0; while(a<deb.length&&b<cre.length){ const x=Math.min(-deb[a][1],cre[b][1]); tr.push(`${esc(EX.people[deb[a][0]])} → ${esc(EX.people[cre[b][0]])}: <b>${x.toFixed(2)} €</b>`); deb[a][1]+=x; cre[b][1]-=x; if(deb[a][1]>-.01)a++; if(cre[b][1]<.01)b++; }
+  $('#settle').innerHTML=tr.length?tr.map(t=>`<div>${t}</div>`).join(''):'<div class="src">Visi lygūs.</div>';
+  $('#exlist').innerHTML=EX.items.slice().reverse().map((it,ri)=>{ const i=EX.items.length-1-ri; return `<tr><td>${esc(EX.people[it.who]||'?')}</td><td>${esc(it.desc||'')}</td><td class="num">${it.amt.toLocaleString('lt-LT')} ${it.cur}</td><td class="num">${(it.amt/RATE[it.cur]).toFixed(2)}</td><td><button class="btn2" type="button" data-del="${i}" aria-label="Ištrinti">×</button></td></tr>`; }).join('')||'<tr><td colspan="5" class="src">Kol kas išlaidų nėra.</td></tr>';
+  document.querySelectorAll('[data-del]').forEach(bt=>bt.onclick=()=>{ EX.items.splice(+bt.dataset.del,1); saveEx(); renderEx(); });
+}
+$('#expform').addEventListener('submit',e=>{ e.preventDefault(); const amt=parseFloat($('#examt').value); if(!(amt>0)) return;
+  EX.items.push({who:+$('#exwho').value,amt,cur:$('#excur').value,desc:$('#exdesc').value.trim(),ts:Date.now()}); saveEx(); $('#examt').value=''; $('#exdesc').value=''; renderEx(); });
+async function copyText(t,el){ try{ await navigator.clipboard.writeText(t); status(el,'Nukopijuota.'); }catch(e){ status(el,'Nepavyko nukopijuoti – pažymėkite tekstą ranka.'); } }
+function status(sel,t){ const el=$(sel); if(!el) return; el.textContent=t; clearTimeout(el._t); el._t=setTimeout(()=>el.textContent='',4000); }
+$('#exexport').onclick=()=>copyText(JSON.stringify(EX),'#exstatus');
+$('#eximport').onclick=()=>{ const box=$('#eximportbox'); if(box.hidden){ box.hidden=false; box.focus(); status('#exstatus','Įklijuokite duomenis į laukelį ir spauskite dar kartą.'); return; }
+  try{ const d=JSON.parse(box.value); if(!Array.isArray(d.people)||!Array.isArray(d.items)) throw 0; EX=d; saveEx(); renderEx(); box.value=''; box.hidden=true; status('#exstatus','Duomenys įkelti.'); }catch(e){ status('#exstatus','Netinkami duomenys.'); } };
+$('#exclear').onclick=()=>{ if($('#exclear').dataset.sure){ EX.items=[]; saveEx(); renderEx(); delete $('#exclear').dataset.sure; $('#exclear').textContent='Išvalyti viską'; } else { $('#exclear').dataset.sure=1; $('#exclear').textContent='Tikrai išvalyti?'; setTimeout(()=>{ delete $('#exclear').dataset.sure; $('#exclear').textContent='Išvalyti viską'; },4000);} };
+$('#copyemail').onclick=()=>copyText($('#emailtpl').value,'#copystatus');
+$('#sharebtn').onclick=async()=>{ const u=location.href.split('#')[0]; if(navigator.share){ try{ await navigator.share({title:'Albanijos kelionės planas',url:u}); return; }catch(e){} } copyText(u,'#sharestatus'); };
+$('#printbtn').onclick=()=>window.print();
+
+/* ================= routing & variant ================= */
+const TABS=['marsrutas','automobilis','orai','kelioneje','islaidos','patikra','nakvynes','biudzetas','pasiruosimas'];
+document.querySelectorAll('#varseg button').forEach(b=>b.onclick=()=>{ variant=b.dataset.v; store.set('alb-variant',variant); selStop=null; renderFacts(); renderTables(); buildMapLayers(); go(true); });
+document.querySelectorAll('#wxseg button').forEach(b=>b.onclick=()=>{ wxMode=b.dataset.m; document.querySelectorAll('#wxseg button').forEach(x=>x.setAttribute('aria-pressed',x===b)); loadWx(); });
+function go(force){
+  const h=(location.hash||'').slice(1); let tab='marsrutas', day=0;
+  const m=/^d([1-7])$/.exec(h); if(m) day=+m[1]; else if(TABS.includes(h)) tab=h;
+  TABS.forEach(t=>$('#view-'+t).classList.toggle('on',t===tab));
+  document.querySelectorAll('nav.tabs a').forEach(a=>a.dataset.tab===tab?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
+  if(tab==='marsrutas'){
+    if(day!==selDay){ selStop=null; if(map) map.closePopup(); }
+    selDay=day; renderChips(); renderPanel();
+    if(map){ setTimeout(()=>{ map.invalidateSize(); refreshMarks(); fitSel(); },0); }
+  }
+  if(tab==='orai'&&!wxLoaded){ wxLoaded=true; loadWx(); }
+}
+initMap(); renderFilters(); renderFacts(); renderTables(); renderChecks(); renderEx(); buildMapLayers();
+addEventListener('hashchange',()=>go());
 go();
+if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>
